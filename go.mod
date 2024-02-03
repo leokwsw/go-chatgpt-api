@@ -8,6 +8,7 @@ require (
 	github.com/bogdanfinn/tls-client v1.6.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.3.1
+	github.com/gorilla/websocket v1.5.1
 	github.com/joho/godotenv v1.5.1
 	github.com/linweiyuan/go-logger v0.0.0-20230709142852-da1f090a7d4c
 	github.com/xqdoo00o/OpenAIAuth v0.0.0-20230928031215-356afd0d7a6b

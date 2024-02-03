@@ -3,9 +3,14 @@ package chatgpt
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"io"
+	"log"
+	http2 "net/http"
+	"net/url"
 	"strings"
 
 	http "github.com/bogdanfinn/fhttp"
@@ -128,43 +133,129 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 
 	defer resp.Body.Close()
 	reader := bufio.NewReader(resp.Body)
-	for {
-		if c.Request.Context().Err() != nil {
-			break
-		}
+	readStr, _ := reader.ReadString(' ')
 
-		line, err := reader.ReadString('\n')
+	if strings.Contains(readStr, "\"wss_url\"") {
+		var createConversationWssResponse CreateConversationWSSResponse
+		json.Unmarshal([]byte(readStr), &createConversationWssResponse)
+		wssUrl := createConversationWssResponse.WssUrl
+
+		fmt.Println(wssUrl)
+
+		wssu, err := url.Parse(wssUrl)
+
+		fmt.Println(wssu.RawQuery)
+
+		wssSubProtocols := []string{"json.reliable.webpubsub.azure.v1"}
+
+		dialer := websocket.DefaultDialer
+		wssRequest, err := http.NewRequest("GET", wssUrl, nil)
 		if err != nil {
-			break
+			log.Fatal("Error creating request:", err)
 		}
+		wssRequest.Header.Add("Sec-WebSocket-Protocol", wssSubProtocols[0])
 
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "event") ||
-			strings.HasPrefix(line, "data: 20") ||
-			strings.HasPrefix(line, `data: {"conversation_id"`) ||
-			line == "" {
-			continue
+		conn, wssResp, err := dialer.Dial(wssUrl, http2.Header(wssRequest.Header))
+		if err != nil {
+			log.Fatal("Error dialing:", err)
 		}
+		defer conn.Close()
 
-		responseJson := line[6:]
-		if strings.HasPrefix(responseJson, "[DONE]") && isMaxTokens && request.AutoContinue {
-			continue
-		}
+		log.Printf("WebSocket handshake completed with status code: %d", wssResp.StatusCode)
 
-		// no need to unmarshal every time, but if response content has this "max_tokens", need to further check
-		if strings.TrimSpace(responseJson) != "" && strings.Contains(responseJson, responseTypeMaxTokens) {
-			var createConversationResponse CreateConversationResponse
-			json.Unmarshal([]byte(responseJson), &createConversationResponse)
-			message := createConversationResponse.Message
-			if message.Metadata.FinishDetails.Type == responseTypeMaxTokens && createConversationResponse.Message.Status == responseStatusFinishedSuccessfully {
-				isMaxTokens = true
-				continueParentMessageID = message.ID
-				continueConversationID = createConversationResponse.ConversationID
+		recvMsgCount := 0
+
+		for {
+			messageType, message, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("Error reading message:", err)
+				break // Exit the loop on error
+			}
+
+			// Handle different types of messages (Text, Binary, etc.)
+			switch messageType {
+			case websocket.TextMessage:
+				log.Printf("Received Text Message: %s", message)
+				var wssConversationResponse WSSConversationResponse
+				json.Unmarshal(message, &wssConversationResponse)
+
+				sequenceId := wssConversationResponse.SequenceId
+
+				sequenceMsg := WSSSequenceAckMessage{
+					Type:       "sequenceAck",
+					SequenceId: sequenceId,
+				}
+				sequenceMsgStr, err := json.Marshal(sequenceMsg)
+
+				base64Body := wssConversationResponse.Data.Body
+				bodyByte, err := base64.StdEncoding.DecodeString(base64Body)
+
+				if err != nil {
+					return
+				}
+				body := string(bodyByte[:])
+
+				if len(body) > 0 {
+					c.Writer.Write([]byte(body))
+					c.Writer.Flush()
+				}
+
+				if strings.Contains(body[:], "[DONE]") {
+					conn.WriteMessage(websocket.TextMessage, sequenceMsgStr)
+					conn.Close()
+					return
+				}
+
+				recvMsgCount++
+
+				if recvMsgCount > 10 {
+					conn.WriteMessage(websocket.TextMessage, sequenceMsgStr)
+				}
+			case websocket.BinaryMessage:
+				log.Printf("Received Binary Message: %d bytes", len(message))
+			default:
+				log.Printf("Received Other Message Type: %d", messageType)
 			}
 		}
+	} else {
+		for {
+			if c.Request.Context().Err() != nil {
+				break
+			}
 
-		c.Writer.Write([]byte(line + "\n\n"))
-		c.Writer.Flush()
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				break
+			}
+
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "event") ||
+				strings.HasPrefix(line, "data: 20") ||
+				strings.HasPrefix(line, `data: {"conversation_id"`) ||
+				line == "" {
+				continue
+			}
+
+			responseJson := line[6:]
+			if strings.HasPrefix(responseJson, "[DONE]") && isMaxTokens && request.AutoContinue {
+				continue
+			}
+
+			// no need to unmarshal every time, but if response content has this "max_tokens", need to further check
+			if strings.TrimSpace(responseJson) != "" && strings.Contains(responseJson, responseTypeMaxTokens) {
+				var createConversationResponse CreateConversationResponse
+				json.Unmarshal([]byte(responseJson), &createConversationResponse)
+				message := createConversationResponse.Message
+				if message.Metadata.FinishDetails.Type == responseTypeMaxTokens && createConversationResponse.Message.Status == responseStatusFinishedSuccessfully {
+					isMaxTokens = true
+					continueParentMessageID = message.ID
+					continueConversationID = createConversationResponse.ConversationID
+				}
+			}
+
+			c.Writer.Write([]byte(line + "\n\n"))
+			c.Writer.Flush()
+		}
 	}
 
 	if isMaxTokens && request.AutoContinue {

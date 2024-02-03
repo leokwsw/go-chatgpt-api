@@ -94,3 +94,30 @@ type GetModelsResponse struct {
 		PluginsModel         string `json:"plugins_model"`
 	} `json:"categories"`
 }
+
+type CreateConversationWSSResponse struct {
+	WssUrl         string `json:"wss_url"`
+	ConversationId string `json:"conversation_id"`
+	ResponseId     string `json:"response_id"`
+}
+
+type WSSConversationResponse struct {
+	SequenceId int                         `json:"sequenceId"`
+	Type       string                      `json:"type"`
+	From       string                      `json:"from"`
+	DataType   string                      `json:"dataType"`
+	Data       WSSConversationResponseData `json:"data"`
+}
+
+type WSSSequenceAckMessage struct {
+	Type       string `json:"type"`
+	SequenceId int    `json:"sequenceId"`
+}
+
+type WSSConversationResponseData struct {
+	Type           string `json:"type"`
+	Body           string `json:"body"`
+	MoreBody       bool   `json:"more_body"`
+	ResponseId     string `json:"response_id"`
+	ConversationId string `json:"conversation_id"`
+}
