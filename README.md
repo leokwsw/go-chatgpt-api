@@ -1,6 +1,17 @@
 # go-chatgpt-api
 
-<details>
+## Update
+
+- [2024/02/04] Added support WebSocket in `/chatgpt/backend-api/conversation` response
+- [2024/03/04] Use Ninja to get access token to fix can not get access token through `xqdoo00o/OpenAIAuth`, <br>before
+  You use this Please<br> 1. follow [Installation](https://github.com/gngpp/ninja/wiki/1-安装)
+  and [Command Manual](https://github.com/gngpp/ninja/wiki/4-命令手册) set up ninja with arkose solver first<br>2.
+  update the `.env` file, add named `NINJA_URL` value with your ninja host and port,
+  like `NINJA_URL=http://127.0.0.1:7999`
+
+---
+
+## 一个尝试绕过 `Cloudflare` 来使用 `ChatGPT` 接口的程序
 
 <summary>这个项目已经死了，请让它安息吧</summary>
 
@@ -18,7 +29,9 @@
 - https://platform.openai.com/playground 登录返回 `apiKey`
 - `apiKey` 余额查询
 - 等等 ...
-- 支持 `ChatGPT` 转 `API`，接口 `/imitate/v1/chat/completions`，利用 `accessToken` 模拟 `apiKey`，实现伪免费使用 `API`，从而支持集成仅支持 `apiKey` 调用的第三方客户端项目，分享一个好用的脚本测试 `web-to-api` (https://github.com/linweiyuan/go-chatgpt-api/issues/251)
+- 支持 `ChatGPT` 转 `API`，接口 `/imitate/v1/chat/completions`，利用 `accessToken` 模拟 `apiKey`，实现伪免费使用 `API`
+  ，从而支持集成仅支持 `apiKey`
+  调用的第三方客户端项目，分享一个好用的脚本测试 `web-to-api` (https://github.com/linweiyuan/go-chatgpt-api/issues/251)
 
 ```python
 import openai
@@ -51,21 +64,26 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example
 
 汇总贴：https://github.com/linweiyuan/go-chatgpt-api/issues/74
 
-如果有疑问而不是什么程序出错其实可以在 [Discussions](https://github.com/linweiyuan/go-chatgpt-api/discussions) 里发而不是新增 Issue
+如果有疑问而不是什么程序出错其实可以在 [Discussions](https://github.com/linweiyuan/go-chatgpt-api/discussions) 里发而不是新增
+Issue
 
 群聊：https://github.com/linweiyuan/go-chatgpt-api/discussions/197
 
-再说一遍，不要来 `Issues` 提你的疑问（再提不回复直接关闭），有讨论区，有群，不要提脑残问题，反面教材：https://github.com/linweiyuan/go-chatgpt-api/issues/255
+再说一遍，不要来 `Issues`
+提你的疑问（再提不回复直接关闭），有讨论区，有群，不要提脑残问题，反面教材：https://github.com/linweiyuan/go-chatgpt-api/issues/255
 
 ---
 
 ### 配置
 
-如需设置代理，可以设置环境变量 `PROXY`，比如 `PROXY=http://127.0.0.1:20171` 或者 `PROXY=socks5://127.0.0.1:20170`，注释掉或者留空则不启用
+如需设置代理，可以设置环境变量 `PROXY`，比如 `PROXY=http://127.0.0.1:20171` 或者 `PROXY=socks5://127.0.0.1:20170`
+，注释掉或者留空则不启用
 
 如果代理需账号密码验证，则 `http://username:password@ip:port` 或者 `socks5://username:password@ip:port`
 
-如需配合 `warp` 使用：`PROXY=socks5://chatgpt-proxy-server-warp:65535`，因为需要设置 `warp` 的场景已经默认可以直接访问 `ChatGPT` 官网，因此共用一个变量不冲突（国内 `VPS` 不在讨论范围内，请自行配置网络环境，`warp` 服务在魔法环境下才能正常工作）
+如需配合 `warp` 使用：`PROXY=socks5://chatgpt-proxy-server-warp:65535`，因为需要设置 `warp`
+的场景已经默认可以直接访问 `ChatGPT` 官网，因此共用一个变量不冲突（国内 `VPS` 不在讨论范围内，请自行配置网络环境，`warp`
+服务在魔法环境下才能正常工作）
 
 家庭网络无需跑 `warp` 服务，跑了也没用，会报错，仅在服务器需要
 
@@ -73,7 +91,8 @@ https://github.com/linweiyuan/go-chatgpt-api/tree/main/example
 
 ---
 
-`GPT-4` 相关模型目前需要验证 `arkose_token`，社区已经有很多解决方案，请自行查找，其中一个能用的：https://github.com/linweiyuan/go-chatgpt-api/issues/252
+`GPT-4` 相关模型目前需要验证 `arkose_token`
+，社区已经有很多解决方案，请自行查找，其中一个能用的：https://github.com/linweiyuan/go-chatgpt-api/issues/252
 
 参考配置视频（拉到文章最下面点开视频，需要自己有一定的动手能力，根据你的环境不同自行微调配置）：[如何生成 GPT-4 arkose_token](https://linweiyuan.github.io/2023/06/24/%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90-GPT-4-arkose-token.html)
 
@@ -137,7 +156,8 @@ services:
 
 ---
 
-目前 `warp` 容器检测到流量超过 1G 会自动重启，如果你知道什么是 `teams-enroll-token` （不知道就跳过），可以通过环境变量 `TEAMS_ENROLL_TOKEN` 设置它的值，然后利用这条命令来检查是否生效
+目前 `warp` 容器检测到流量超过 1G 会自动重启，如果你知道什么是 `teams-enroll-token`
+（不知道就跳过），可以通过环境变量 `TEAMS_ENROLL_TOKEN` 设置它的值，然后利用这条命令来检查是否生效
 
 `docker-compose exec chatgpt-proxy-server-warp warp-cli --accept-tos account | awk 'NR==1'`
 
