@@ -70,8 +70,6 @@ func CreateConversation(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("chat_require token" + chatRequirements.Token)
-
 	if chatRequirements.Arkose.Required == true && request.ArkoseToken == "" {
 		arkoseToken, err := api.GetArkoseToken(apiVersion)
 		if err != nil || arkoseToken == "" {
@@ -81,8 +79,6 @@ func CreateConversation(c *gin.Context) {
 
 		request.ArkoseToken = arkoseToken
 	}
-
-	fmt.Println("chat_require arkoseToken" + request.ArkoseToken)
 
 	resp, done := sendConversationRequest(c, request, chatRequirements.Token)
 	if done {
@@ -182,11 +178,7 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 		json.Unmarshal([]byte(readStr), &webSocketResponse)
 		wssUrlStr := webSocketResponse.WssUrl
 
-		fmt.Println("WebSocket Url : " + wssUrlStr)
-
-		//wssUrl, _ := url.Parse(wssUrlStr)
-		//
-		//fmt.Println(wssUrl.RawQuery)
+		//fmt.Println("WebSocket Url : " + wssUrlStr)
 
 		webSocketSubProtocols := []string{WebSocketProtocols}
 
@@ -215,7 +207,7 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 
 			switch messageType {
 			case websocket.TextMessage:
-				log.Printf("Received Text Message: %s", message)
+				//log.Printf("Received Text Message: %s", message)
 				var wssConversationResponse WebSocketMessageResponse
 				json.Unmarshal(message, &wssConversationResponse)
 
@@ -253,9 +245,9 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 				}
 
 			case websocket.BinaryMessage:
-				log.Printf("Received Binary Message: %d bytes", len(message))
+				//log.Printf("Received Binary Message: %d bytes", len(message))
 			default:
-				log.Printf("Received Other Message Type: %d", messageType)
+				//log.Printf("Received Other Message Type: %d", messageType)
 			}
 		}
 

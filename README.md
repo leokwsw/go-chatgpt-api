@@ -10,8 +10,21 @@
 - Auto get AccessToken(for `imitate`) and PUID(for `Plus` account) by (`OPENAI_EMAIL` and `OPENAI_PASSWORD`)
   or `OPENAI_REFRESH_TOKEN`
 - Support Use `Ninja` get Access Token (set `NINJA_URL` in `.env`)
-- Support log request to `MongoDB` and local storage (set `MONGODB_URL` and `MONGODB_DBNAME` for
-  MongoDB, `JSON_FOLDER_PATH` for local storage)
+
+---
+
+## Setup
+
+1. Create Har file Pool folder : Currently logged in account, using the GPT-4 model and most GPT-3.5 models, you need to
+   configure a HAR file (file
+   with .har suffix) to complete captcha verification.
+    1. Use a Chromium-based browser (Chrome, Edge) to open the browser developer tools (F12), switch to the Network tab,
+       and check the preserve log option.
+    2. Log in to `https://chat.openai.com/`, create a new chat and select the GPT-4 model, enter any text, switch to the
+       GPT-3.5 model, and enter any text.
+    3. Click the Export HAR button under the Network tab to export the file chat.openai.com.har and place it in
+       the `harPool` folder of the same level as this program.
+2. You can download the binary from releases or `go run main.go`
 
 ---
 
