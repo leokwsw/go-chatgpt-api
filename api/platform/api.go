@@ -5,15 +5,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/linweiyuan/go-logger/logger"
 	"io"
 	"strings"
 
-	http "github.com/bogdanfinn/fhttp"
 	"github.com/gin-gonic/gin"
-
 	"github.com/linweiyuan/go-chatgpt-api/api"
-	"github.com/linweiyuan/go-logger/logger"
+
+	http "github.com/bogdanfinn/fhttp"
 )
+
+func ListModels(c *gin.Context) {
+	handleGet(c, apiListModels)
+}
+
+func RetrieveModel(c *gin.Context) {
+	model := c.Param("model")
+	handleGet(c, fmt.Sprintf(apiRetrieveModel, model))
+}
+
+func CreateCompletions(c *gin.Context) {
+	CreateChatCompletions(c)
+}
 
 func CreateChatCompletions(c *gin.Context) {
 	body, _ := io.ReadAll(c.Request.Body)
@@ -24,7 +37,7 @@ func CreateChatCompletions(c *gin.Context) {
 
 	url := c.Request.URL.Path
 	if strings.Contains(url, "/chat") {
-		url = apiCreateChatCompletions
+		url = apiCreataeChatCompletions
 	} else {
 		url = apiCreateCompletions
 	}
@@ -48,10 +61,6 @@ func CreateChatCompletions(c *gin.Context) {
 	} else {
 		io.Copy(c.Writer, resp.Body)
 	}
-}
-
-func CreateCompletions(c *gin.Context) {
-	CreateChatCompletions(c)
 }
 
 func handleCompletionsResponse(c *gin.Context, resp *http.Response) {
@@ -80,9 +89,85 @@ func handleCompletionsResponse(c *gin.Context, resp *http.Response) {
 	}
 }
 
+func CreateEdit(c *gin.Context) {
+	var request CreateEditRequest
+	c.ShouldBindJSON(&request)
+	data, _ := json.Marshal(request)
+	resp, err := handlePost(c, apiCreateEdit, data, false)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
+}
+
+func CreateImage(c *gin.Context) {
+	var request CreateImageRequest
+	c.ShouldBindJSON(&request)
+	data, _ := json.Marshal(request)
+	resp, err := handlePost(c, apiCreateImage, data, false)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
+}
+
+func CreateEmbeddings(c *gin.Context) {
+	var request CreateEmbeddingsRequest
+	c.ShouldBindJSON(&request)
+	data, _ := json.Marshal(request)
+	resp, err := handlePost(c, apiCreateEmbeddings, data, false)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
+}
+
+func CreateModeration(c *gin.Context) {
+	var request CreateModerationRequest
+	c.ShouldBindJSON(&request)
+	data, _ := json.Marshal(request)
+	resp, err := handlePost(c, apiCreateModeration, data, false)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
+}
+
+func ListFiles(c *gin.Context) {
+	handleGet(c, apiListFiles)
+}
+
+func GetCreditGrants(c *gin.Context) {
+	handleGet(c, apiGetCreditGrants)
+}
+
+func GetSubscription(c *gin.Context) {
+	handleGet(c, apiGetSubscription)
+}
+
+func GetApiKeys(c *gin.Context) {
+	handleGet(c, apiGetApiKeys)
+}
+
+func handleGet(c *gin.Context, url string) {
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+	resp, _ := api.Client.Do(req)
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
+}
+
 func handlePost(c *gin.Context, url string, data []byte, stream bool) (*http.Response, error) {
 	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
-	req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c))
+	req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
 	if stream {
 		req.Header.Set("Accept", "text/event-stream")
 	}

@@ -31,12 +31,12 @@ type Delta struct {
 	Role    string `json:"role,omitempty"`
 }
 
-func NewChatCompletionChunk(text string, id string, model string) ChatCompletionChunk {
+func NewChatCompletionChunk(text string) ChatCompletionChunk {
 	return ChatCompletionChunk{
-		ID:      id,
+		ID:      "chatcmpl-QXlha2FBbmROaXhpZUFyZUF3ZXNvbWUK",
 		Object:  "chat.completion.chunk",
-		Created: time.Now().Unix(),
-		Model:   model,
+		Created: 0,
+		Model:   "gpt-3.5-turbo-0301",
 		Choices: []Choices{
 			{
 				Index: 0,
@@ -49,12 +49,12 @@ func NewChatCompletionChunk(text string, id string, model string) ChatCompletion
 	}
 }
 
-func StopChunk(reason string, id string, model string) ChatCompletionChunk {
+func StopChunk(reason string) ChatCompletionChunk {
 	return ChatCompletionChunk{
-		ID:      id,
+		ID:      "chatcmpl-QXlha2FBbmROaXhpZUFyZUF3ZXNvbWUK",
 		Object:  "chat.completion.chunk",
-		Created: time.Now().Unix(),
-		Model:   model,
+		Created: 0,
+		Model:   "gpt-3.5-turbo-0301",
 		Choices: []Choices{
 			{
 				Index:        0,
@@ -107,10 +107,22 @@ type Message struct {
 
 type Metadata struct {
 	Timestamp     string         `json:"timestamp_"`
+	Citations     []Citation     `json:"citations,omitempty"`
 	MessageType   string         `json:"message_type"`
 	FinishDetails *FinishDetails `json:"finish_details"`
 	ModelSlug     string         `json:"model_slug"`
 	Recipient     string         `json:"recipient"`
+}
+
+type Citation struct {
+	Metadata CitaMeta `json:"metadata"`
+	StartIx  int      `json:"start_ix"`
+	EndIx    int      `json:"end_ix"`
+}
+
+type CitaMeta struct {
+	URL   string `json:"url"`
+	Title string `json:"title"`
 }
 
 type FinishDetails struct {

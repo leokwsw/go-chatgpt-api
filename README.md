@@ -1,25 +1,28 @@
 # go-chatgpt-api
 
-## Update
+## 此為個人維護版，與原版相比，有以下改動及根據OpenAI的更改而去改變
 
-- [2024/02/04] Added support WebSocket in `/chatgpt/backend-api/conversation` response
-- [2024/03/04] Use Ninja to get access token to fix can not get access token through `xqdoo00o/OpenAIAuth`, <br>before
-  You use this Please<br> 1. follow [Installation](https://github.com/gngpp/ninja/wiki/1-安装)
-  and [Command Manual](https://github.com/gngpp/ninja/wiki/4-命令手册) set up ninja with arkose solver first<br>2.
-  update the `.env` file, add named `NINJA_URL` value with your ninja host and port,
-  like `NINJA_URL=http://127.0.0.1:7999`
+### 2024-03-23
 
----
-
-## 一个尝试绕过 `Cloudflare` 来使用 `ChatGPT` 接口的程序
-
-<summary>这个项目已经死了，请让它安息吧</summary>
-
-## 一个尝试绕过 `Cloudflare` 来使用 `ChatGPT` 接口的程序
+- Fix 403 Error
+- System Auto detect use Arkose Version
+- `/chat/completions` Support WSS, imitate also support
+- Auto get AccessToken(for `imitate`) and PUID(for `Plus` account) by (`OPENAI_EMAIL` and `OPENAI_PASSWORD`)
+  or `OPENAI_REFRESH_TOKEN`
+- Support Use `Ninja` get Access Token (set `NINJA_URL` in `.env`)
+- Support log request to `MongoDB` and local storage (set `MONGODB_URL` and `MONGODB_DBNAME` for
+  MongoDB, `JSON_FOLDER_PATH` for local storage)
 
 ---
 
-# 以下文档内容已过期，不一定支持（2023-10-24）
+<details>
+<summary>linweiyuan README.md</summary>
+
+## 一个尝试绕过 `Cloudflare` 来使用 `ChatGPT` 接口的程序
+
+（本项目没什么问题的话，基本不会有什么大的更新了，够用了，同时欢迎 PR）
+
+---
 
 ### 支持接口
 
@@ -76,8 +79,8 @@ Issue
 
 ### 配置
 
-如需设置代理，可以设置环境变量 `PROXY`，比如 `PROXY=http://127.0.0.1:20171` 或者 `PROXY=socks5://127.0.0.1:20170`
-，注释掉或者留空则不启用
+如需设置代理，可以设置环境变量 `PROXY`，比如 `PROXY=http://127.0.0.1:20171`
+或者 `PROXY=socks5://127.0.0.1:20170`，注释掉或者留空则不启用
 
 如果代理需账号密码验证，则 `http://username:password@ip:port` 或者 `socks5://username:password@ip:port`
 
@@ -87,7 +90,7 @@ Issue
 
 家庭网络无需跑 `warp` 服务，跑了也没用，会报错，仅在服务器需要
 
-`CONTINUE_SIGNAL=1`，开启 `/imitate` 接口自动继续会话功能，留空关闭，默认关闭
+`CONTINUE_SIGNAL=1`，开启/imitate接口自动继续会话功能，留空关闭，默认关闭
 
 ---
 
@@ -107,6 +110,7 @@ Issue
 服务器不定时维护，不保证高可用，利用这些服务导致的账号安全问题，与本项目无关
 
 - https://go-chatgpt-api.linweiyuan.com
+- https://api.tms.im
 
 </details>
 
@@ -115,7 +119,6 @@ Issue
 <summary>网络在直连或者通过代理的情况下可以正常访问 ChatGPT</summary>
 
 ```yaml
-services:
   go-chatgpt-api:
     container_name: go-chatgpt-api
     image: linweiyuan/go-chatgpt-api
@@ -133,7 +136,6 @@ services:
 <summary>服务器无法正常访问 ChatGPT</summary>
 
 ```yaml
-services:
   go-chatgpt-api:
     container_name: go-chatgpt-api
     image: linweiyuan/go-chatgpt-api
@@ -157,7 +159,8 @@ services:
 ---
 
 目前 `warp` 容器检测到流量超过 1G 会自动重启，如果你知道什么是 `teams-enroll-token`
-（不知道就跳过），可以通过环境变量 `TEAMS_ENROLL_TOKEN` 设置它的值，然后利用这条命令来检查是否生效
+（不知道就跳过），可以通过环境变量 `TEAMS_ENROLL_TOKEN`
+设置它的值，然后利用这条命令来检查是否生效
 
 `docker-compose exec chatgpt-proxy-server-warp warp-cli --accept-tos account | awk 'NR==1'`
 
@@ -169,7 +172,7 @@ Account type: Team （设置正常）
 
 ---
 
-### Render 部署
+### Render部署
 
 点击下面的按钮一键部署，缺点是免费版本冷启动比较慢
 
@@ -247,8 +250,14 @@ BASE_URL=http://go-chatgpt-api:8080/imitate
 
 ### 最后感谢各位同学
 
+<!--suppress HtmlRequiredAltAttribute -->
 <a href="https://github.com/linweiyuan/go-chatgpt-api/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=linweiyuan/go-chatgpt-api"  alt=""/>
 </a>
 
+Made with [contrib.rocks](https://contrib.rocks).
+
+---
+
+![](https://linweiyuan.github.io/about/mm_reward_qrcode.png)
 </details>

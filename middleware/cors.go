@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	http "github.com/bogdanfinn/fhttp"
 	"github.com/gin-gonic/gin"
+
+	http "github.com/bogdanfinn/fhttp"
 )
 
 func CORS() gin.HandlerFunc {

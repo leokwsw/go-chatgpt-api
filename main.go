@@ -1,19 +1,20 @@
 package main
 
 import (
-	"log"
-	"os"
-	"strings"
-
-	http "github.com/bogdanfinn/fhttp"
+	"flag"
+	"fmt"
+	"github.com/denisbrodbeck/machineid"
 	"github.com/gin-gonic/gin"
-
 	"github.com/linweiyuan/go-chatgpt-api/api"
 	"github.com/linweiyuan/go-chatgpt-api/api/chatgpt"
 	"github.com/linweiyuan/go-chatgpt-api/api/imitate"
 	"github.com/linweiyuan/go-chatgpt-api/api/platform"
 	_ "github.com/linweiyuan/go-chatgpt-api/env"
 	"github.com/linweiyuan/go-chatgpt-api/middleware"
+	"log"
+	"strings"
+
+	http "github.com/bogdanfinn/fhttp"
 )
 
 func init() {
@@ -22,8 +23,16 @@ func init() {
 }
 
 func main() {
-	router := gin.Default()
+	id, err := machineid.ProtectedID("go-chatgpt-api")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("id :", id)
 
+	flatPort := flag.String("port", "8080", "")
+	flag.Parse()
+
+	router := gin.Default()
 	router.Use(middleware.CORS())
 	router.Use(middleware.Authorization())
 
@@ -31,19 +40,26 @@ func main() {
 	setupPlatformAPIs(router)
 	setupPandoraAPIs(router)
 	setupImitateAPIs(router)
+
 	router.NoRoute(api.Proxy)
 
 	router.GET("/", func(c *gin.Context) {
+		c.Header("Content-Type", "text/plain")
 		c.String(http.StatusOK, api.ReadyHint)
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	err := router.Run(":" + port)
-	if err != nil {
-		log.Fatal("failed to start server: " + err.Error())
+	router.GET("/robots.txt", func(c *gin.Context) {
+		c.Header("Content-Type", "text/plain")
+		c.String(http.StatusOK, api.RobotsHint)
+	})
+
+	port := *flatPort
+
+	rErr := router.Run(":" + port)
+	if rErr != nil {
+		log.Fatal("Failed to start Http server: " + rErr.Error())
+	} else {
+		fmt.Println("run on port :" + port)
 	}
 }
 
@@ -53,10 +69,38 @@ func setupChatGPTAPIs(router *gin.Engine) {
 		chatgptGroup.POST("/login", chatgpt.Login)
 		chatgptGroup.POST("/backend-api/login", chatgpt.Login) // add support for other projects
 
-		conversationGroup := chatgptGroup.Group("/backend-api/conversation")
+		conversationsGroup := chatgptGroup.Group("/conversations")
+		{
+			conversationsGroup.GET("", chatgpt.GetConversations)
+
+			// PATCH is official method, POST is added for Java support
+			conversationsGroup.PATCH("", chatgpt.ClearConversations)
+			conversationsGroup.POST("", chatgpt.ClearConversations)
+		}
+
+		backendConversationGroup := chatgptGroup.Group("/backend-api/conversation")
+		{
+			backendConversationGroup.POST("", chatgpt.CreateConversation)
+		}
+
+		conversationGroup := chatgptGroup.Group("/conversation")
 		{
 			conversationGroup.POST("", chatgpt.CreateConversation)
+			conversationGroup.POST("/gen_title/:id", chatgpt.GenerateTitle)
+			conversationGroup.GET("/:id", chatgpt.GetConversation)
+
+			// rename or delete conversation use a same API with different parameters
+			conversationGroup.PATCH("/:id", chatgpt.UpdateConversation)
+			conversationGroup.POST("/:id", chatgpt.UpdateConversation)
+
+			conversationGroup.POST("/message_feedback", chatgpt.FeedbackMessage)
 		}
+
+		// misc
+		chatgptGroup.GET("/models", chatgpt.GetModels)
+		chatgptGroup.GET("/accounts/check", chatgpt.GetAccountCheck)
+
+		chatgptGroup.GET("/ping", chatgpt.Ping)
 	}
 }
 
@@ -64,12 +108,33 @@ func setupPlatformAPIs(router *gin.Engine) {
 	platformGroup := router.Group("/platform")
 	{
 		platformGroup.POST("/login", platform.Login)
-		platformGroup.POST("/v1/login", platform.Login)
 
 		apiGroup := platformGroup.Group("/v1")
 		{
-			apiGroup.POST("/chat/completions", platform.CreateChatCompletions)
+			apiGroup.POST("/login", platform.Login)
+			apiGroup.GET("/models", platform.ListModels)
+			apiGroup.GET("/models/:model", platform.RetrieveModel)
 			apiGroup.POST("/completions", platform.CreateCompletions)
+			apiGroup.POST("/chat/completions", platform.CreateChatCompletions)
+			apiGroup.POST("/edits", platform.CreateEdit)
+			apiGroup.POST("/images/generations", platform.CreateImage)
+			apiGroup.POST("/embeddings", platform.CreateEmbeddings)
+			apiGroup.GET("/files", platform.ListFiles)
+			apiGroup.POST("/moderations", platform.CreateModeration)
+		}
+
+		dashboardGroup := platformGroup.Group("/dashboard")
+		{
+			billingGroup := dashboardGroup.Group("/billing")
+			{
+				billingGroup.GET("/credit_grants", platform.GetCreditGrants)
+				billingGroup.GET("/subscription", platform.GetSubscription)
+			}
+
+			userGroup := dashboardGroup.Group("/user")
+			{
+				userGroup.GET("/api_keys", platform.GetApiKeys)
+			}
 		}
 	}
 }

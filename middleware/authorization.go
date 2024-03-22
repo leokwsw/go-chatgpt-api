@@ -10,13 +10,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/linweiyuan/go-chatgpt-api/api"
 )
 
 const (
-	emptyAccessTokenErrorMessage      = "please provide a valid access token or api key in 'Authorization' header"
-	accessTokenHasExpiredErrorMessage = "the accessToken for account %s has expired"
+	emptyAccessTokenErrorMessage      = "Please provide a valid access token or api key in 'Authorization' header."
+	accessTokenHasExpiredErrorMessage = "The accessToken for account %s has expired."
 )
 
 type AccessToken struct {
@@ -48,7 +47,8 @@ func Authorization() gin.HandlerFunc {
 				c.Header("Content-Type", "text/plain")
 			} else if strings.HasSuffix(c.Request.URL.Path, "/login") ||
 				strings.HasPrefix(c.Request.URL.Path, "/chatgpt/public-api") ||
-				(strings.HasPrefix(c.Request.URL.Path, "/imitate") && os.Getenv("IMITATE_ACCESS_TOKEN") != "") {
+				(strings.HasPrefix(c.Request.URL.Path, "/imitate") && os.Getenv("IMITATE_ACCESS_TOKEN") != "") ||
+				strings.HasPrefix(c.Request.URL.Path, "/ping") {
 				c.Header("Content-Type", "application/json")
 			} else if c.Request.URL.Path == "/favicon.ico" {
 				c.Abort()
@@ -77,8 +77,6 @@ func isExpired(c *gin.Context) bool {
 		rawDecodedText, _ := base64.RawStdEncoding.DecodeString(split[1])
 		var accessToken AccessToken
 		json.Unmarshal(rawDecodedText, &accessToken)
-
-		c.Set(api.EmailKey, accessToken.HTTPSAPIOpenaiComProfile.Email)
 
 		exp := int64(accessToken.Exp)
 		expTime := time.Unix(exp, 0)

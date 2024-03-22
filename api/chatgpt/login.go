@@ -3,12 +3,10 @@ package chatgpt
 import (
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/gin-gonic/gin"
+	"github.com/linweiyuan/go-chatgpt-api/api"
+	"github.com/linweiyuan/go-chatgpt-api/api/ninja"
 	"github.com/xqdoo00o/OpenAIAuth/auth"
 	"os"
-
-	"github.com/linweiyuan/go-chatgpt-api/api"
-
-	"github.com/linweiyuan/go-chatgpt-api/api/ninja"
 )
 
 func Login(c *gin.Context) {
@@ -18,26 +16,39 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	accessToken, _, _, statusCode, errStr := LoginWithUsernameAndPassword(loginInfo.Username, loginInfo.Password)
+
+	if len(errStr) > 0 {
+		c.AbortWithStatusJSON(statusCode, api.ReturnMessage(errStr))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": accessToken,
+		//"puid":        puid,
+		//"oaidid":      oaidid,
+	})
+}
+
+func LoginWithUsernameAndPassword(username string, password string) (string, string, string, int, string) {
 	if os.Getenv("NINJA_URL") != "" {
-		authToken, err := ninja.Login(loginInfo.Username, loginInfo.Password)
+		authToken, err := ninja.Login(username, password)
 
 		if err != nil {
-			c.AbortWithStatusJSON(err.StatusCode, api.ReturnMessage(err.Details))
-			return
+			return "", "", "", err.StatusCode, err.Details
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"accessToken": authToken,
-		})
+		puid, oaidid := api.GetIDs(authToken)
+
+		return authToken, puid, oaidid, 200, ""
 	} else {
-		authenticator := auth.NewAuthenticator(loginInfo.Username, loginInfo.Password, api.ProxyUrl)
+		authenticator := auth.NewAuthenticator(username, password, api.ProxyUrl)
 		if err := authenticator.Begin(); err != nil {
-			c.AbortWithStatusJSON(err.StatusCode, api.ReturnMessage(err.Details))
-			return
+			return "", "", "", err.StatusCode, err.Details
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"accessToken": authenticator.GetAccessToken(),
-		})
+		puid, oaidid := api.GetIDs(authenticator.GetAccessToken())
+
+		return authenticator.GetAccessToken(), puid, oaidid, 200, ""
 	}
 }

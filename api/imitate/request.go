@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"io"
 
-	http "github.com/bogdanfinn/fhttp"
 	"github.com/gin-gonic/gin"
+
+	http "github.com/bogdanfinn/fhttp"
 )
 
 type ContinueInfo struct {
@@ -21,8 +22,9 @@ type APIRequest struct {
 }
 
 type ApiMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role     string      `json:"role"`
+	Content  string      `json:"content"`
+	Metadata interface{} `json:"metadata"`
 }
 
 func HandleRequestError(c *gin.Context, response *http.Response) bool {

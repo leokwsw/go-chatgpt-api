@@ -61,7 +61,6 @@ Authorization: Bearer {{accessToken}}
 
 ### get conversation limit (no need to pass access token)
 GET {{baseUrl}}/chatgpt/public-api/conversation_limit
-Authorization: Bearer {{accessToken}}
 
 ### get models with pandora enabled
 GET {{baseUrl}}/api/models?history_and_training_disabled=false
@@ -122,8 +121,4 @@ Content-Type: application/json
 
 ### get plugins
 GET {{baseUrl}}/chatgpt/backend-api/aip/p?offset=0&limit=250&statuses=approved
-Authorization: Bearer {{accessToken}}
-
-### get payment url
-GET {{baseUrl}}/chatgpt/backend-api/payments/customer_portal
 Authorization: Bearer {{accessToken}}

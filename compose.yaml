@@ -2,18 +2,11 @@ services:
   go-chatgpt-api:
     build: .
     container_name: go-chatgpt-api
-    image: linweiyuan/go-chatgpt-api
+    image: leonardpark/go-chatgpt-api
     ports:
       - 8080:8080
     environment:
-      - PORT=
       - TZ=Asia/Shanghai
-      - PROXY=
-      - OPENAI_EMAIL=
-      - OPENAI_PASSWORD=
-      - CONTINUE_SIGNAL=
-      - ENABLE_HISTORY=
-      - IMITATE_ACCESS_TOKEN=
-    volumes:
-      - ./chat.openai.com.har:/app/chat.openai.com.har
+      - PORT=8080
+      - NINJA_URL=http://127.0.0.1:7999
     restart: unless-stopped
