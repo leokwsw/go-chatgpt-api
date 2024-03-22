@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '*'
+
+env:
+  PLATFORMS: ${{ vars.PLATFORMS || 'linux/amd64,linux/arm64' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set current datetime as env variable
+        env:
+          TZ: 'Asia/HongKong' # タイムゾーン指定
+        run: echo "CURRENT_DATETIME=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
+
+      # region setup and build
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+
+      - name: Install dependencies
+        run: go get .
+
+      - name: Build
+        run: go build -v .
+      # endregion
+
+      # region upload artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: go-chatgpt-api-${{ env.CURRENT_DATETIME }}
+          path: go-chatgpt-api
+      # endregion
