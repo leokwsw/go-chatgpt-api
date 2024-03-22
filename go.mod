@@ -1,4 +1,4 @@
-module github.com/linweiyuan/go-chatgpt-api
+module github.com/leokwsw/go-chatgpt-api
 
 go 1.21
 
@@ -14,10 +14,8 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/joho/godotenv v1.5.1
 	github.com/linweiyuan/go-logger v0.0.0-20230709142852-da1f090a7d4c
-	github.com/unrolled/secure v1.14.0
 	github.com/xqdoo00o/OpenAIAuth v0.0.0-20240320160511-93065690aa0e
-    github.com/xqdoo00o/funcaptcha v0.0.0-20240313153914-4ab805804232
-	go.mongodb.org/mongo-driver v1.14.0
+	github.com/xqdoo00o/funcaptcha v0.0.0-20240313153914-4ab805804232
 )
 
 require (
@@ -54,10 +52,12 @@ require (
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
+	github.com/unrolled/secure v1.14.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
+	go.mongodb.org/mongo-driver v1.14.0 // indirect
 	golang.org/x/arch v0.7.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 // indirect

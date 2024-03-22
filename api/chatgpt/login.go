@@ -3,8 +3,8 @@ package chatgpt
 import (
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/gin-gonic/gin"
-	"github.com/linweiyuan/go-chatgpt-api/api"
-	"github.com/linweiyuan/go-chatgpt-api/api/ninja"
+	"github.com/leokwsw/go-chatgpt-api/api"
+	"github.com/leokwsw/go-chatgpt-api/api/ninja"
 	"github.com/xqdoo00o/OpenAIAuth/auth"
 	"os"
 )

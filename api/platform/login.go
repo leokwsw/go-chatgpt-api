@@ -8,7 +8,7 @@ import (
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/gin-gonic/gin"
 
-	"github.com/linweiyuan/go-chatgpt-api/api"
+	"github.com/leokwsw/go-chatgpt-api/api"
 )
 
 func Login(c *gin.Context) {

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/gorilla/websocket"
-	"github.com/linweiyuan/go-chatgpt-api/api"
+	"github.com/leokwsw/go-chatgpt-api/api"
 	"time"
 )
 

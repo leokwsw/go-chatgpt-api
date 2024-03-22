@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/linweiyuan/go-chatgpt-api/api"
+	"github.com/leokwsw/go-chatgpt-api/api"
 
 	http "github.com/bogdanfinn/fhttp"
 )
@@ -15,7 +15,7 @@ const (
 	healthCheckUrl = ApiPrefix + "/accounts/check"
 	readyHint      = "Service go-chatgpt-api is ready."
 	errorHintBlock = "Looks like you have bean blocked -> curl https://chat.openai.com | grep '<p>' | awk '{$1=$1;print}'"
-	errorHint403   = "Failed to handle 403, have a look at https://github.com/linweiyuan/java-chatgpt-api or use other more powerful alternatives (do not raise new issue about 403)."
+	errorHint403   = "Failed to handle 403."
 	sleepHours     = 8760 // 365 days
 )
 

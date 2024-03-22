@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
-	"github.com/linweiyuan/go-chatgpt-api/api"
+	"github.com/leokwsw/go-chatgpt-api/api"
 	"io"
 	"os"
 	"strings"

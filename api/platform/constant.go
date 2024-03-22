@@ -1,6 +1,6 @@
 package platform
 
-import "github.com/linweiyuan/go-chatgpt-api/api"
+import "github.com/leokwsw/go-chatgpt-api/api"
 
 const (
 	apiListModels             = api.PlatformApiUrlPrefix + "/v1/models"

@@ -14,7 +14,7 @@ import (
 
 	"github.com/bogdanfinn/tls-client/profiles"
 	"github.com/gin-gonic/gin"
-	_ "github.com/linweiyuan/go-chatgpt-api/env"
+	_ "github.com/leokwsw/go-chatgpt-api/env"
 	"github.com/linweiyuan/go-logger/logger"
 
 	http "github.com/bogdanfinn/fhttp"
