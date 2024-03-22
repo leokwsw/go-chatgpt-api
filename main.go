@@ -11,6 +11,7 @@ import (
 	"github.com/leokwsw/go-chatgpt-api/api/platform"
 	_ "github.com/leokwsw/go-chatgpt-api/env"
 	"github.com/leokwsw/go-chatgpt-api/middleware"
+	"github.com/linweiyuan/go-logger/logger"
 	"log"
 	"strings"
 
@@ -27,7 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("id :", id)
+	logger.Info("id : " + id)
 
 	flatPort := flag.String("port", "8080", "")
 	flag.Parse()

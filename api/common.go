@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/xqdoo00o/OpenAIAuth/auth"
 	"github.com/xqdoo00o/funcaptcha"
@@ -95,6 +96,9 @@ func init() {
 	ArkoseClient = getHttpClient()
 
 	setupID()
+
+	logger.Info("User-Agent : " + UserAgent)
+	logger.Info("Oai-Device-Id : " + OAIDID)
 }
 
 func NewHttpClient() tls_client.HttpClient {
@@ -181,6 +185,11 @@ func setupID() {
 	password := os.Getenv("OPENAI_PASSWORD")
 	refreshtoken := os.Getenv("OPENAI_REFRESH_TOKEN")
 	OAIDID = os.Getenv("OPENAI_DEVICE_ID")
+
+	if len(OAIDID) <= 0 {
+		OAIDID = uuid.NewString()
+	}
+
 	if username != "" && password != "" {
 		go func() {
 			for {

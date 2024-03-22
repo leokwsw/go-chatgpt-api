@@ -6,7 +6,6 @@ services:
     ports:
       - 8080:8080
     environment:
-      - TZ=Asia/Shanghai
+      - TZ=Asia/HongKong
       - PORT=8080
-      - NINJA_URL=http://127.0.0.1:7999
     restart: unless-stopped
