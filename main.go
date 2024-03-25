@@ -100,6 +100,9 @@ func setupChatGPTAPIs(router *gin.Engine) {
 		// misc
 		chatgptGroup.GET("/models", chatgpt.GetModels)
 		chatgptGroup.GET("/accounts/check", chatgpt.GetAccountCheck)
+		chatgptGroup.GET("/me", chatgpt.GetMe)
+		chatgptGroup.GET("/prompt_library/", chatgpt.GetPromptLibrary)
+		chatgptGroup.GET("/gizmos", chatgpt.GetGizmos)
 
 		chatgptGroup.GET("/ping", chatgpt.Ping)
 	}

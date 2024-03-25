@@ -12,6 +12,9 @@ const (
 	clearConversationsErrorMessage = "Failed to clear conversations."
 	feedbackMessageErrorMessage    = "Failed to add feedback."
 	getModelsErrorMessage          = "Failed to get models."
+	meErrorMessage                 = "Failed to get me"
+	promptLibraryErrorMessage      = "Failed to get Prompt Library"
+	gizmosErrorMessage             = "Failed to get Gizmos"
 	getAccountCheckErrorMessage    = "Check failed." // Placeholder. Never encountered.
 	parseJsonErrorMessage          = "Failed to parse json request body."
 

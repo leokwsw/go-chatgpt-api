@@ -360,11 +360,46 @@ func ClearConversations(c *gin.Context) {
 }
 
 func GetModels(c *gin.Context) {
-	handleGet(c, ApiPrefix+"/models", getModelsErrorMessage)
+
+	historyAndTrainingDisabled, ok := c.GetQuery("history_and_training_disabled")
+	if !ok {
+		historyAndTrainingDisabled = "false"
+	}
+
+	handleGet(c, ApiPrefix+"/models?history_and_training_disabled="+historyAndTrainingDisabled, getModelsErrorMessage)
 }
 
 func GetAccountCheck(c *gin.Context) {
-	handleGet(c, ApiPrefix+"/accounts/check", getAccountCheckErrorMessage)
+	handleGet(c, ApiPrefix+"/accounts/check/v4-2023-04-27", getAccountCheckErrorMessage)
+}
+
+func GetMe(c *gin.Context) {
+	handleGet(c, ApiPrefix+"/me", meErrorMessage)
+}
+
+func GetPromptLibrary(c *gin.Context) {
+
+	limit, ok := c.GetQuery("limit")
+	if !ok {
+		limit = "4"
+	}
+
+	offset, ok := c.GetQuery("offset")
+	if !ok {
+		offset = "0"
+	}
+
+	handleGet(c, ApiPrefix+"/prompt_library/?limit="+limit+"&offset="+offset, promptLibraryErrorMessage)
+}
+
+func GetGizmos(c *gin.Context) {
+	limit, ok := c.GetQuery("limit")
+	if !ok {
+		limit = "4"
+	}
+
+	handleGet(c, ApiPrefix+"/gizmos/bootstrap?limit="+limit, gizmosErrorMessage)
+
 }
 
 func handleNoAuthGet(c *gin.Context, url string, errorMessage string) {
