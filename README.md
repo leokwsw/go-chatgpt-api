@@ -26,6 +26,21 @@
        the `harPool` folder of the same level as this program.
 2. You can download the binary from releases or `go run main.go`
 
+### How to apply to third-party client-side (last update at : 2024/03/26)
+
+- [ChatGPTNextWeb/ChatGPT-Next-Web](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web)
+
+.env
+```
+OPENAI_API_KEY=<your openai api key>
+BASE_URL=http://localhost:8080/platform
+...
+```
+
+---
+
+
+
 ---
 
 <details>

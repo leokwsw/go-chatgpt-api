@@ -71,17 +71,17 @@ func CreateChatCompletions(c *gin.Context) {
 		return
 	}
 
-	uuid := uuid.NewString()
-	var chat_requirements *chatgpt.ChatRequirements
+	uid := uuid.NewString()
+	var chatRequirements *chatgpt.ChatRequirements
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 	go func() {
 		defer waitGroup.Done()
-		err = chatgpt.InitWebSocketConnect(token, uuid)
+		err = chatgpt.InitWebSocketConnect(token, uid)
 	}()
 	go func() {
 		defer waitGroup.Done()
-		chat_requirements, err = chatgpt.GetChatRequirementsByAccessToken(token)
+		chatRequirements, err = chatgpt.GetChatRequirementsByAccessToken(token)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(err.Error()))
 			return
@@ -92,15 +92,15 @@ func CreateChatCompletions(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "unable to create ws tunnel"})
 		return
 	}
-	if chat_requirements == nil {
+	if chatRequirements == nil {
 		c.JSON(500, gin.H{"error": "unable to check chat requirement"})
 		return
 	}
 
 	// 将聊天请求转换为ChatGPT请求。
-	translatedRequest := convertAPIRequest(originalRequest, chat_requirements.Arkose.Required)
+	translatedRequest := convertAPIRequest(originalRequest, chatRequirements.Arkose.Required)
 
-	response, done := sendConversationRequest(c, translatedRequest, token, chat_requirements.Token)
+	response, done := sendConversationRequest(c, translatedRequest, token, chatRequirements.Token)
 	if done {
 		c.JSON(500, gin.H{
 			"error": "error sending request",
@@ -124,7 +124,7 @@ func CreateChatCompletions(c *gin.Context) {
 	for i := 3; i > 0; i-- {
 		var continueInfo *ContinueInfo
 		var responsePart string
-		responsePart, continueInfo = Handler(c, response, token, uuid, originalRequest.Stream)
+		responsePart, continueInfo = Handler(c, response, token, uid, originalRequest.Stream)
 		fullResponse += responsePart
 		if continueInfo == nil {
 			break
@@ -134,10 +134,10 @@ func CreateChatCompletions(c *gin.Context) {
 		translatedRequest.Action = "continue"
 		translatedRequest.ConversationID = &continueInfo.ConversationID
 		translatedRequest.ParentMessageID = continueInfo.ParentID
-		if chat_requirements.Arkose.Required {
+		if chatRequirements.Arkose.Required {
 			chatgpt.RenewTokenForRequest(&translatedRequest)
 		}
-		response, done = sendConversationRequest(c, translatedRequest, token, chat_requirements.Token)
+		response, done = sendConversationRequest(c, translatedRequest, token, chatRequirements.Token)
 
 		if done {
 			c.JSON(500, gin.H{
@@ -169,7 +169,7 @@ func CreateChatCompletions(c *gin.Context) {
 		return
 	}
 	if !originalRequest.Stream {
-		c.JSON(200, newChatCompletion(fullResponse, translatedRequest.Model, uuid))
+		c.JSON(200, newChatCompletion(fullResponse, translatedRequest.Model, uid))
 	} else {
 		c.String(200, "data: [DONE]\n\n")
 	}
@@ -223,6 +223,10 @@ func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired boo
 		chatgptRequest.AddMessage(apiMessage.Role, apiMessage.Content, apiMessage.Metadata)
 	}
 
+	if chatgptRequest.ConversationMode.Kind == "" {
+		chatgptRequest.ConversationMode.Kind = "primary_assistant"
+	}
+
 	return chatgptRequest
 }
 
@@ -236,7 +240,7 @@ func NewChatGPTRequest() chatgpt.CreateConversationRequest {
 	}
 }
 
-func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationRequest, accessToken string, chatRequirementsTokenL string) (*http.Response, bool) {
+func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationRequest, accessToken string, chatRequirementsToken string) (*http.Response, bool) {
 	jsonBytes, _ := json.Marshal(request)
 	req, _ := http.NewRequest(http.MethodPost, api.ChatGPTApiUrlPrefix+"/backend-api/conversation", bytes.NewBuffer(jsonBytes))
 	req.Header.Set("User-Agent", api.UserAgent)
@@ -245,8 +249,8 @@ func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationR
 	if request.ArkoseToken != "" {
 		req.Header.Set("Openai-Sentinel-Arkose-Token", request.ArkoseToken)
 	}
-	if chatRequirementsTokenL != "" {
-		req.Header.Set("Openai-Sentinel-Chat-Requirements-Token", chatRequirementsTokenL)
+	if chatRequirementsToken != "" {
+		req.Header.Set("Openai-Sentinel-Chat-Requirements-Token", chatRequirementsToken)
 	}
 	if api.PUID != "" {
 		req.Header.Set("Cookie", "_puid="+api.PUID+";")
