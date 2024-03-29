@@ -4,3 +4,4 @@ __debug*
 chat.openai.com.har
 .idea
 harPool
+.DS_Store
