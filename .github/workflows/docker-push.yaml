@@ -51,7 +51,7 @@ jobs:
           context: .
           platforms: ${{ env.PLATFORMS }}
           push: true
-          tags: ${{ github.actor }}/go-chatgpt-api:${{ env.CURRENT_DATETIME }}
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/go-chatgpt-api:${{ env.CURRENT_DATETIME }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
  
