@@ -48,7 +48,7 @@ func Authorization() gin.HandlerFunc {
 			} else if strings.HasSuffix(c.Request.URL.Path, "/login") ||
 				strings.HasPrefix(c.Request.URL.Path, "/chatgpt/public-api") ||
 				(strings.HasPrefix(c.Request.URL.Path, "/imitate") && os.Getenv("IMITATE_ACCESS_TOKEN") != "") ||
-				strings.HasPrefix(c.Request.URL.Path, "/ping") {
+				strings.HasPrefix(c.Request.URL.Path, "/chatgpt/ping") {
 				c.Header("Content-Type", "application/json")
 			} else if c.Request.URL.Path == "/favicon.ico" {
 				c.Abort()
