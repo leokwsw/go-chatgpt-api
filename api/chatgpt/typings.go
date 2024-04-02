@@ -18,15 +18,20 @@ type CreateConversationRequest struct {
 	PluginIDs                  []string         `json:"plugin_ids"`
 	TimezoneOffsetMin          int              `json:"timezone_offset_min"`
 	ArkoseToken                string           `json:"arkose_token"`
+	VariantPurpose             string           `json:"variant_purpose"`
 	HistoryAndTrainingDisabled bool             `json:"history_and_training_disabled"`
 	ConversationMode           ConversationMode `json:"conversation_mode"`
 	ForceParagen               bool             `json:"force_paragen"`
+	ForceParagenModelSlug      string           `json:"force_paragen_model_slug"`
+	ForceNulligen              string           `json:"force_nulligen"`
 	ForceRateLimit             bool             `json:"force_rate_limit"`
 	Suggestions                []string         `json:"suggestions"`
+	WebSocketRequestId         string           `json:"websocket_request_id"`
 }
 
 type ConversationMode struct {
-	Kind string `json:"kind"`
+	Kind      string   `json:"kind"`
+	PluginIds []string `json:"plugin_ids"`
 }
 
 type Message struct {
@@ -35,6 +40,11 @@ type Message struct {
 	Content  Content     `json:"content"`
 	ID       string      `json:"id"`
 	Metadata interface{} `json:"metadata"`
+}
+
+type MessageMetadata struct {
+	ExcludeAfterNextUserMessage bool   `json:"exclude_after_next_user_message"`
+	TargetReply                 string `json:"target_reply"`
 }
 
 type Author struct {

@@ -330,3 +330,82 @@ Content-Type: application/json
     "Other"
   ]
 }
+
+### message target reply
+POST {{baseUrl}}/chatgpt/backend-api/conversation
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "action": "next",
+  "messages": [
+    {
+      "id": "{{$random.uuid}}",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "hello"
+        ]
+      },
+      "metadata": {}
+    }
+  ],
+  "model": "gpt-3.5-turbo",
+  "temperature": 0,
+  "frequency_penalty": 0.7,
+  "presence_penalty": 0.7,
+  "timezone_offset_min": -480,
+  "history_and_training_disabled": false
+}
+
+### variant
+POST {{baseUrl}}/chatgpt/backend-api/conversation
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "action": "variant",
+  "messages": [
+    {
+      "id": "{{$random.uuid}}",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "there is what information ? such as MUHK awards ?"
+        ]
+      },
+      "metadata": {
+        "targeted_reply": "**Research and Knowledge about MUHK's Computing Program**: Mention any specific research you have done on MUHK's Computing program. Highlight aspects of the program that excite you the most, such as particular courses, faculty members, research opportunities, or the program's approach to teaching and learning in computing and technology. This shows that your decision to apply was well-informed and that you have a clear interest in what MUHK specifically offers."
+      }
+    }
+  ],
+  "conversation_id": "22e43238-caed-4322-9bf1-9ccf4cafd00d",
+  "parent_message_id": "07624c04-587d-4f38-ba6b-dbd56e90907e",
+  "model": "gpt-4",
+  "timezone_offset_min": -480,
+  "variant_purpose": "none",
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant",
+    "plugin_ids": null
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_nulligen": false,
+  "force_rate_limit": false,
+  "websocket_request_id": "b879c001-8814-4e91-be55-1f42e7d8cb0f"
+}
+
+### TTS
+POST {{baseUrl}}/chatgpt/synthesize?message_id={{message_id}}&conversation_id={{conversation_id}}&voice=ember&format=aac
+Authorization: Bearer {{accessToken}}
+Accept: */*
+
