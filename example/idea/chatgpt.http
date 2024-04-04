@@ -409,3 +409,31 @@ POST {{baseUrl}}/chatgpt/synthesize?message_id={{message_id}}&conversation_id={{
 Authorization: Bearer {{accessToken}}
 Accept: */*
 
+### Message Compare feedback
+POST {{baseUrl}}/chatgpt/backend-api/conversation/message_comparison_feedback
+accept: */*
+authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "feedback_version": "skippable_parallel_2_in_stream:a:1.0",
+  "original_message_id": "9de9e3db-8d3b-4c37-9647-d562468e056b",
+  "new_message_id": "13525dfa-e7d0-4e2e-b8d5-8c2878fea7f2",
+  "rating": "none",
+  "conversation_id": "fc1bdb68-5bbe-4095-8815-b79049d59d38",
+  "text": "",
+  "tags": [],
+  "completion_comparison_rating": "skip_without_completion",
+  "new_completion_placement": "right",
+  "feedback_start_time": 1712082568089,
+  "compare_step_start_time": 1712082568089,
+  "original_completion_load_start_time": 1712082568089,
+  "original_completion_load_end_time": null,
+  "new_completion_load_start_time": 1712082568089,
+  "new_completion_load_end_time": null,
+  "frontend_submission_time": 1712082605628,
+  "timezone_offset_min": -480
+}
+
+###
+
