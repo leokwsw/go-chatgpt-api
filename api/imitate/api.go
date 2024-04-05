@@ -10,6 +10,7 @@ import (
 	"github.com/leokwsw/go-chatgpt-api/api"
 	"github.com/leokwsw/go-chatgpt-api/api/chatgpt"
 	"io"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -440,6 +441,9 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 			if !(originalResponse.Message.Author.Role == "assistant" || (originalResponse.Message.Author.Role == "tool" && originalResponse.Message.Content.ContentType != "text")) || originalResponse.Message.Content.Parts == nil {
 				continue
 			}
+			if originalResponse.Message.Metadata.MessageType == "" {
+				continue
+			}
 			if originalResponse.Message.Metadata.MessageType != "next" && originalResponse.Message.Metadata.MessageType != "continue" || !strings.HasSuffix(originalResponse.Message.Content.ContentType, "text") {
 				continue
 			}
@@ -459,9 +463,17 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 					}
 				}
 				offset := 0
-				for i, citation := range originalResponse.Message.Metadata.Citations {
+				for _, citation := range originalResponse.Message.Metadata.Citations {
 					rl := len(r)
-					originalResponse.Message.Content.Parts[0] = string(r[:citation.StartIx+offset]) + "[^" + strconv.Itoa(i+1) + "^](" + citation.Metadata.URL + " \"" + citation.Metadata.Title + "\")" + string(r[citation.EndIx+offset:])
+					attr := urlAttrMap[citation.Metadata.URL]
+					if attr == "" {
+						u, _ := url.Parse(citation.Metadata.URL)
+						baseURL := u.Scheme + "://" + u.Host + "/"
+						attr = getURLAttribution(token, api.PUID, baseURL)
+						if attr != "" {
+							urlAttrMap[citation.Metadata.URL] = attr
+						}
+					}
 					r = []rune(originalResponse.Message.Content.Parts[0].(string))
 					offset += len(r) - rl
 				}
@@ -487,9 +499,9 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 					if err != nil {
 						continue
 					}
-					url := apiUrl + strings.Split(dalleContent.AssetPointer, "//")[1] + "/download"
+					newUrl := apiUrl + strings.Split(dalleContent.AssetPointer, "//")[1] + "/download"
 					waitGroup.Add(1)
-					go GetImageSource(&waitGroup, url, dalleContent.Metadata.Dalle.Prompt, token, index, imgSource)
+					go GetImageSource(&waitGroup, newUrl, dalleContent.Metadata.Dalle.Prompt, token, index, imgSource)
 				}
 				waitGroup.Wait()
 				translatedResponse := NewChatCompletionChunk(strings.Join(imgSource, ""))
@@ -531,8 +543,8 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 			}
 			if isEnd {
 				if stream {
-					final_line := StopChunk(finishReason)
-					c.Writer.WriteString("data: " + final_line.String() + "\n\n")
+					finalLine := StopChunk(finishReason)
+					c.Writer.WriteString("data: " + finalLine.String() + "\n\n")
 				}
 				break
 			}
@@ -545,4 +557,36 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 		ConversationID: originalResponse.ConversationID,
 		ParentID:       originalResponse.Message.ID,
 	}
+}
+
+var urlAttrMap = make(map[string]string)
+
+func getURLAttribution(token string, puid string, url string) string {
+	req, err := http.NewRequest(http.MethodPost, chatgpt.ApiPrefix+"/attributions", bytes.NewBuffer([]byte(`{"urls":["`+url+`"]}`)))
+	if err != nil {
+		return ""
+	}
+	if puid != "" {
+		req.Header.Set("Cookie", "_puid="+puid+";")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", api.UserAgent)
+	req.Header.Set("Oai-Language", api.Language)
+	if token != "" {
+		req.Header.Set("Authorization", api.GetAccessToken(token))
+	}
+	if err != nil {
+		return ""
+	}
+	resp, err := api.Client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	var urlAttr chatgpt.UrlAttr
+	err = json.NewDecoder(resp.Body).Decode(&urlAttr)
+	if err != nil {
+		return ""
+	}
+	return urlAttr.Attribution
 }

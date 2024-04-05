@@ -208,3 +208,8 @@ type FileInfo struct {
 	DownloadURL string `json:"download_url"`
 	Status      string `json:"status"`
 }
+
+type UrlAttr struct {
+	Url         string `json:"url"`
+	Attribution string `json:"attribution"`
+}
