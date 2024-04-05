@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/linweiyuan/go-logger/logger"
 	"io"
@@ -34,6 +35,7 @@ func GetConversations(c *gin.Context) {
 func CreateConversation(c *gin.Context) {
 	var request CreateConversationRequest
 	var apiVersion int
+	uid := uuid.NewString()
 
 	if err := c.BindJSON(&request); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, api.ReturnMessage(parseJsonErrorMessage))
@@ -63,7 +65,7 @@ func CreateConversation(c *gin.Context) {
 		apiVersion = 3
 	}
 
-	chatRequirements, err := GetChatRequirementsByGin(c)
+	chatRequirements, err := GetChatRequirementsByGin(c, uid)
 
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(err.Error()))
@@ -71,7 +73,7 @@ func CreateConversation(c *gin.Context) {
 	}
 
 	if chatRequirements.Arkose.Required == true && request.ArkoseToken == "" {
-		arkoseToken, err := api.GetArkoseToken(apiVersion)
+		arkoseToken, err := api.GetArkoseToken(apiVersion, chatRequirements.Arkose.Dx)
 		if err != nil || arkoseToken == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, api.ReturnMessage(err.Error()))
 			return
@@ -80,19 +82,34 @@ func CreateConversation(c *gin.Context) {
 		request.ArkoseToken = arkoseToken
 	}
 
-	resp, done := sendConversationRequest(c, request, chatRequirements.Token)
+	if c.GetHeader(api.AuthorizationHeader) == "" {
+		request.Model = gpt3dot5Model
+	}
+
+	resp, done := sendConversationRequest(c, request, chatRequirements.Token, uid)
 	if done {
 		return
 	}
-	handleConversationResponse(c, resp, request, chatRequirements.Token)
+	handleConversationResponse(c, resp, request, chatRequirements.Token, chatRequirements.Arkose.Dx, uid)
 }
 
-func sendConversationRequest(c *gin.Context, request CreateConversationRequest, chatRequirementsToken string) (*http.Response, bool) {
+func sendConversationRequest(c *gin.Context, request CreateConversationRequest, chatRequirementsToken string, uid string) (*http.Response, bool) {
 	jsonBytes, _ := json.Marshal(request)
-	req, _ := http.NewRequest(http.MethodPost, ApiPrefix+"/conversation", bytes.NewBuffer(jsonBytes))
+
+	urlPrefix := ""
+
+	if c.GetHeader(api.AuthorizationHeader) == "" {
+		urlPrefix = AnonPrefix
+	} else {
+		urlPrefix = ApiPrefix
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/conversation", bytes.NewBuffer(jsonBytes))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", api.UserAgent)
-	req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+	if urlPrefix == ApiPrefix {
+		req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+	}
 	req.Header.Set("Accept", "text/event-stream")
 	if request.ArkoseToken != "" {
 		req.Header.Set("Openai-Sentinel-Arkose-Token", request.ArkoseToken)
@@ -104,9 +121,14 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 		req.Header.Set("Cookie", "_puid="+api.PUID+";")
 	}
 	req.Header.Set("Oai-Language", api.Language)
-	if api.OAIDID != "" {
-		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
-		req.Header.Set("Oai-Device-Id", api.OAIDID)
+	if urlPrefix == ApiPrefix {
+		if api.OAIDID != "" {
+			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
+			req.Header.Set("Oai-Device-Id", api.OAIDID)
+		}
+	} else {
+		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+uid)
+		req.Header.Set("Oai-Device-Id", uid)
 	}
 	resp, err := api.Client.Do(req)
 	if err != nil {
@@ -125,9 +147,18 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 			return nil, true
 		}
 
-		req, _ := http.NewRequest(http.MethodGet, ApiPrefix+"/models", nil)
+		req, _ := http.NewRequest(http.MethodGet, urlPrefix+"/models", nil)
 		req.Header.Set("User-Agent", api.UserAgent)
-		req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+		if urlPrefix == ApiPrefix {
+			req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+			if api.OAIDID != "" {
+				req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
+				req.Header.Set("Oai-Device-Id", api.OAIDID)
+			}
+		} else {
+			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+uid)
+			req.Header.Set("Oai-Device-Id", uid)
+		}
 		response, err := api.Client.Do(req)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(err.Error()))
@@ -149,7 +180,7 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 			return nil, true
 		}
 
-		fmt.Printf("OpenAI Request Method : %s ; url : %s ; Status : %d\n\n", http.MethodPost, ApiPrefix+"/conversation", resp.StatusCode)
+		fmt.Printf("OpenAI Request Method : %s ; url : %s ; Status : %d\n\n", http.MethodPost, urlPrefix+"/conversation", resp.StatusCode)
 		responseMap := make(map[string]interface{})
 		json.NewDecoder(resp.Body).Decode(&responseMap)
 
@@ -161,7 +192,7 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 	return resp, false
 }
 
-func handleConversationResponse(c *gin.Context, resp *http.Response, request CreateConversationRequest, chatRequirementsToken string) {
+func handleConversationResponse(c *gin.Context, resp *http.Response, request CreateConversationRequest, chatRequirementsToken string, chatRequirementsArkoseDx string, uid string) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 
 	isMaxTokens := false
@@ -293,7 +324,7 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 
 	if isMaxTokens {
 		var continueConversationRequest = CreateConversationRequest{
-			ArkoseToken:                request.ArkoseToken,
+			//ArkoseToken:                request.ArkoseToken,
 			HistoryAndTrainingDisabled: request.HistoryAndTrainingDisabled,
 			Model:                      request.Model,
 			TimezoneOffsetMin:          request.TimezoneOffsetMin,
@@ -302,12 +333,13 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 			ParentMessageID: continueParentMessageID,
 			ConversationID:  &continueConversationID,
 		}
-		resp, done := sendConversationRequest(c, continueConversationRequest, chatRequirementsToken)
+		RenewTokenForRequest(&request, chatRequirementsArkoseDx)
+		resp, done := sendConversationRequest(c, continueConversationRequest, chatRequirementsToken, uid)
 		if done {
 			return
 		}
 
-		handleConversationResponse(c, resp, continueConversationRequest, chatRequirementsToken)
+		handleConversationResponse(c, resp, continueConversationRequest, chatRequirementsToken, chatRequirementsArkoseDx, uid)
 	}
 }
 
@@ -466,9 +498,9 @@ func handlePostOrPatch(c *gin.Context, req *http.Request, errorMessage string) {
 	io.Copy(c.Writer, resp.Body)
 }
 
-func GetChatRequirementsByGin(c *gin.Context) (*ChatRequirements, error) {
+func GetChatRequirementsByGin(c *gin.Context, uid string) (*ChatRequirements, error) {
 
-	chatRequirements, err := GetChatRequirementsByAccessToken(api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
+	chatRequirements, err := GetChatRequirementsByAccessToken(api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)), uid)
 
 	if err != nil {
 		return nil, err
@@ -477,20 +509,36 @@ func GetChatRequirementsByGin(c *gin.Context) (*ChatRequirements, error) {
 	return chatRequirements, nil
 }
 
-func GetChatRequirementsByAccessToken(accessToken string) (*ChatRequirements, error) {
-	req, _ := http.NewRequest(http.MethodPost, ApiPrefix+"/sentinel/chat-requirements", bytes.NewBuffer([]byte(`{"conversation_mode_kind":"primary_assistant"}`)))
+func GetChatRequirementsByAccessToken(accessToken string, uid string) (*ChatRequirements, error) {
+
+	urlPrefix := ""
+
+	if accessToken == "Bearer " {
+		urlPrefix = AnonPrefix
+	} else {
+		urlPrefix = ApiPrefix
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/sentinel/chat-requirements", bytes.NewBuffer([]byte(`{"conversation_mode_kind":"primary_assistant"}`)))
 
 	if api.PUID != "" {
 		req.Header.Set("Cookie", "_puid="+api.PUID+";")
 	}
 	req.Header.Set("Oai-Language", api.Language)
-	if api.OAIDID != "" {
-		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
-		req.Header.Set("Oai-Device-Id", api.OAIDID)
+	if urlPrefix == ApiPrefix {
+		if api.OAIDID != "" {
+			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
+			req.Header.Set("Oai-Device-Id", api.OAIDID)
+		}
+	} else {
+		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+uid)
+		req.Header.Set("Oai-Device-Id", uid)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", api.UserAgent)
-	req.Header.Set(api.AuthorizationHeader, accessToken)
+	if urlPrefix == ApiPrefix {
+		req.Header.Set(api.AuthorizationHeader, accessToken)
+	}
 
 	res, err := api.Client.Do(req)
 
@@ -507,14 +555,14 @@ func GetChatRequirementsByAccessToken(accessToken string) (*ChatRequirements, er
 	return &require, nil
 }
 
-func RenewTokenForRequest(request *CreateConversationRequest) {
+func RenewTokenForRequest(request *CreateConversationRequest, chatRequirementsArkoseDx string) {
 	var apiVersion int
 	if strings.HasPrefix(request.Model, "gpt-4") {
 		apiVersion = 4
 	} else {
 		apiVersion = 3
 	}
-	token, err := api.GetArkoseToken(apiVersion)
+	token, err := api.GetArkoseToken(apiVersion, chatRequirementsArkoseDx)
 	if err == nil {
 		request.ArkoseToken = token
 	} else {

@@ -2,6 +2,12 @@
 
 ## 此為個人維護版，與原版相比，有以下改動及根據OpenAI的更改而去改變
 
+### 2024-04-06
+
+- Update OpenAIAuth and funcaptcha library
+- `POST /chatgpt/conversation`, `POST /chatgpt/backend-api/conversation` and `/api/conversation` support no auth conversation
+  - Sample Request [freeChatgpt.http](example%2FfreeChatgpt.http)
+
 ### 2024-03-23
 
 - Fix 403 Error

@@ -1,0 +1,30 @@
+### create conversation
+#POST {{baseUrl}}/chatgpt/backend-api/conversation
+#POST {{baseUrl}}/chatgpt/conversation
+POST {{baseUrl}}/api/conversation
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "action": "next",
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "variant_purpose": "none",
+  "messages": [
+    {
+      "id": "{{$random.uuid}}",
+      "author": {
+        "role": "user"
+      },
+      "content": {
+        "content_type": "text",
+        "parts": [
+          "Hello"
+        ]
+      }
+    }
+  ],
+  "model": "text-davinci-002-render-sha",
+  "timezone_offset_min": -480
+}

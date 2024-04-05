@@ -5,6 +5,7 @@ const (
 	PublicApiPrefix                = "https://chat.openai.com/public-api"
 	conversationLimit              = PublicApiPrefix + "/conversation_limit"
 	ApiPrefix                      = "https://chat.openai.com/backend-api"
+	AnonPrefix                     = "https://chat.openai.com/backend-anon"
 	getConversationsErrorMessage   = "Failed to get conversations."
 	generateTitleErrorMessage      = "Failed to generate title."
 	getContentErrorMessage         = "Failed to get content."
@@ -18,7 +19,8 @@ const (
 	getAccountCheckErrorMessage    = "Check failed." // Placeholder. Never encountered.
 	parseJsonErrorMessage          = "Failed to parse json request body."
 
-	gpt4Model = "gpt-4"
+	gpt4Model     = "gpt-4"
+	gpt3dot5Model = "text-davinci-002-render-sha"
 
 	actionContinue                     = "continue"
 	responseTypeMaxTokens              = "max_tokens"

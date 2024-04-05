@@ -176,8 +176,8 @@ func GetAccessToken(accessToken string) string {
 	return accessToken
 }
 
-func GetArkoseToken(api_version int) (string, error) {
-	return funcaptcha.GetOpenAIToken(api_version, PUID, ProxyUrl)
+func GetArkoseToken(apiVersion int, dx string) (string, error) {
+	return funcaptcha.GetOpenAIToken(apiVersion, PUID, dx, ProxyUrl)
 }
 
 func setupID() {

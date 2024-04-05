@@ -43,7 +43,11 @@ func Authorization() gin.HandlerFunc {
 		}
 
 		if authorization == "" {
-			if c.Request.URL.Path == "/" {
+			if strings.EqualFold(c.Request.Method, "POST") && (strings.EqualFold(c.Request.URL.Path, "/chatgpt/conversation") ||
+				strings.EqualFold(c.Request.URL.Path, "/chatgpt/backend-api/conversation") ||
+				strings.EqualFold(c.Request.URL.Path, "/api/conversation")) {
+				c.Header("Content-Type", "application/json")
+			} else if c.Request.URL.Path == "/" {
 				c.Header("Content-Type", "text/plain")
 			} else if strings.HasSuffix(c.Request.URL.Path, "/login") ||
 				strings.HasPrefix(c.Request.URL.Path, "/chatgpt/public-api") ||

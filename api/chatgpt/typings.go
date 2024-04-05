@@ -23,7 +23,7 @@ type CreateConversationRequest struct {
 	ConversationMode           ConversationMode `json:"conversation_mode"`
 	ForceParagen               bool             `json:"force_paragen"`
 	ForceParagenModelSlug      string           `json:"force_paragen_model_slug"`
-	ForceNulligen              string           `json:"force_nulligen"`
+	ForceNulligen              bool             `json:"force_nulligen"`
 	ForceRateLimit             bool             `json:"force_rate_limit"`
 	Suggestions                []string         `json:"suggestions"`
 	WebSocketRequestId         string           `json:"websocket_request_id"`
