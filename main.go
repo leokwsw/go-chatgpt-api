@@ -97,6 +97,17 @@ func setupChatGPTAPIs(router *gin.Engine) {
 			conversationGroup.POST("/message_feedback", chatgpt.FeedbackMessage)
 		}
 
+		synthesizeGroup := chatgptGroup.Group("/synthesize")
+		{
+			synthesizeGroup.GET("/", chatgpt.GetSynthesize)
+		}
+
+		settingGroup := chatgptGroup.Group("/settings")
+		{
+			settingGroup.GET("/user", chatgpt.GetUserSetting)
+			settingGroup.PATCH("/account_user_setting", chatgpt.UpdateUserSetting)
+		}
+
 		// misc
 		chatgptGroup.GET("/models", chatgpt.GetModels)
 		chatgptGroup.GET("/accounts/check", chatgpt.GetAccountCheck)

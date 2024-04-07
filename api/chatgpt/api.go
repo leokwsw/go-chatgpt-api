@@ -20,6 +20,42 @@ import (
 	http2 "net/http"
 )
 
+func UpdateUserSetting(c *gin.Context) {
+	feature, ok := c.GetQuery("feature")
+	if !ok {
+		return
+	}
+	value, ok := c.GetQuery("value")
+	if !ok {
+		return
+	}
+	handlePatch(c, ApiPrefix+"/settings/account_user_setting?feature="+feature+"&value="+value, "{}", updateMySettingErrorMessage)
+}
+
+func GetUserSetting(c *gin.Context) {
+	handleGet(c, ApiPrefix+"/settings/user", getMySettingErrorMessage)
+}
+
+func GetSynthesize(c *gin.Context) {
+	conversationId, ok := c.GetQuery("conversation_id")
+	if !ok {
+		return
+	}
+	messageId, ok := c.GetQuery("message_id")
+	if !ok {
+		return
+	}
+	voice, ok := c.GetQuery("voice")
+	if !ok {
+		voice = "cove"
+	}
+	format, ok := c.GetQuery("format")
+	if !ok {
+		format = "aac"
+	}
+	handleGet(c, ApiPrefix+"/synthesize?conversation_id="+conversationId+"&message_id="+messageId+"&voice="+voice+"&format="+format, getSynthesizeErrorMessage)
+}
+
 func GetConversations(c *gin.Context) {
 	offset, ok := c.GetQuery("offset")
 	if !ok {
@@ -392,13 +428,7 @@ func ClearConversations(c *gin.Context) {
 }
 
 func GetModels(c *gin.Context) {
-
-	historyAndTrainingDisabled, ok := c.GetQuery("history_and_training_disabled")
-	if !ok {
-		historyAndTrainingDisabled = "false"
-	}
-
-	handleGet(c, ApiPrefix+"/models?history_and_training_disabled="+historyAndTrainingDisabled, getModelsErrorMessage)
+	handleGet(c, ApiPrefix+"/models", getModelsErrorMessage)
 }
 
 func GetAccountCheck(c *gin.Context) {

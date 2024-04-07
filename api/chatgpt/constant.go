@@ -6,6 +6,9 @@ const (
 	conversationLimit              = PublicApiPrefix + "/conversation_limit"
 	ApiPrefix                      = "https://chat.openai.com/backend-api"
 	AnonPrefix                     = "https://chat.openai.com/backend-anon"
+	updateMySettingErrorMessage    = "Failed to update setting"
+	getMySettingErrorMessage       = "Failed to get setting"
+	getSynthesizeErrorMessage      = "Failed to get synthesize."
 	getConversationsErrorMessage   = "Failed to get conversations."
 	generateTitleErrorMessage      = "Failed to generate title."
 	getContentErrorMessage         = "Failed to get content."
@@ -23,6 +26,7 @@ const (
 	gpt3dot5Model = "text-davinci-002-render-sha"
 
 	actionContinue                     = "continue"
+	actionVariant                      = "variant"
 	responseTypeMaxTokens              = "max_tokens"
 	responseStatusFinishedSuccessfully = "finished_successfully"
 	noModelPermissionErrorMessage      = "you have no permission to use this model"
