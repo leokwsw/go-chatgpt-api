@@ -141,6 +141,14 @@ func CreateModeration(c *gin.Context) {
 	io.Copy(c.Writer, resp.Body)
 }
 
+func CreateTranscriptions(c *gin.Context) {
+	
+}
+
+func CreateSpeech(c *gin.Context) {
+
+}
+
 func ListFiles(c *gin.Context) {
 	handleGet(c, apiListFiles)
 }

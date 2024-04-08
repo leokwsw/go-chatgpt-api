@@ -136,6 +136,8 @@ func setupPlatformAPIs(router *gin.Engine) {
 			apiGroup.POST("/embeddings", platform.CreateEmbeddings)
 			apiGroup.GET("/files", platform.ListFiles)
 			apiGroup.POST("/moderations", platform.CreateModeration)
+			apiGroup.POST("/audio/transcriptions", platform.CreateTranscriptions)
+			apiGroup.POST("/audio/speech", platform.CreateSpeech)
 		}
 
 		dashboardGroup := platformGroup.Group("/dashboard")
