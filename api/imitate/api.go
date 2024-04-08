@@ -108,9 +108,9 @@ func CreateChatCompletions(c *gin.Context) {
 
 	response, done := sendConversationRequest(c, translatedRequest, token, chatRequirements.Token, uid)
 	if done {
-		c.JSON(500, gin.H{
-			"error": "error sending request",
-		})
+		//c.JSON(500, gin.H{
+		//	"error": "error sending request",
+		//})
 		return
 	}
 
@@ -143,12 +143,12 @@ func CreateChatCompletions(c *gin.Context) {
 		if chatRequirements.Arkose.Required {
 			chatgpt.RenewTokenForRequest(&translatedRequest, chatRequirements.Arkose.Dx)
 		}
-		response, done = sendConversationRequest(c, translatedRequest, token, chatRequirements.Token)
+		response, done = sendConversationRequest(c, translatedRequest, token, chatRequirements.Token, uid)
 
 		if done {
-			c.JSON(500, gin.H{
-				"error": "error sending request",
-			})
+			//c.JSON(500, gin.H{
+			//	"error": "error sending request",
+			//})
 			return
 		}
 
@@ -169,9 +169,9 @@ func CreateChatCompletions(c *gin.Context) {
 	}
 
 	if c.Writer.Status() != 200 {
-		c.JSON(500, gin.H{
-			"error": "error sending request",
-		})
+		//c.JSON(500, gin.H{
+		//	"error": "error sending request",
+		//})
 		return
 	}
 	if !originalRequest.Stream {
