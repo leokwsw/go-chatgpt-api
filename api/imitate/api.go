@@ -63,23 +63,28 @@ func CreateChatCompletions(c *gin.Context) {
 	}
 
 	if token == "" {
-		c.JSON(400, gin.H{"error": gin.H{
-			"message": "API KEY is missing or invalid",
-			"type":    "invalid_request_error",
-			"param":   nil,
-			"code":    "400",
-		}})
-		return
+		logger.Warn("no token was provided, use no account approach")
+		//c.JSON(400, gin.H{"error": gin.H{
+		//	"message": "API KEY is missing or invalid",
+		//	"type":    "invalid_request_error",
+		//	"param":   nil,
+		//	"code":    "400",
+		//}})
+		//return
 	}
 
 	uid := uuid.NewString()
 	var chatRequirements *chatgpt.ChatRequirements
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(2)
-	go func() {
-		defer waitGroup.Done()
-		err = chatgpt.InitWebSocketConnect(token, uid)
-	}()
+	if token == "" {
+		waitGroup.Add(1)
+	} else {
+		waitGroup.Add(2)
+		go func() {
+			defer waitGroup.Done()
+			err = chatgpt.InitWebSocketConnect(token, uid)
+		}()
+	}
 	go func() {
 		defer waitGroup.Done()
 		chatRequirements, err = chatgpt.GetChatRequirementsByAccessToken(token, uid)
@@ -99,9 +104,9 @@ func CreateChatCompletions(c *gin.Context) {
 	}
 
 	// 将聊天请求转换为ChatGPT请求。
-	translatedRequest := convertAPIRequest(originalRequest, chatRequirements.Arkose.Required, chatRequirements.Arkose.Dx)
+	translatedRequest := convertAPIRequest(originalRequest, chatRequirements.Arkose.Required, chatRequirements.Arkose.Dx, token)
 
-	response, done := sendConversationRequest(c, translatedRequest, token, chatRequirements.Token)
+	response, done := sendConversationRequest(c, translatedRequest, token, chatRequirements.Token, uid)
 	if done {
 		c.JSON(500, gin.H{
 			"error": "error sending request",
@@ -184,11 +189,11 @@ func generateId() string {
 	return "chatcmpl-" + id
 }
 
-func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired bool, chatRequirementsArkoseDx string) chatgpt.CreateConversationRequest {
+func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired bool, chatRequirementsArkoseDx string, token string) chatgpt.CreateConversationRequest {
 	chatgptRequest := NewChatGPTRequest()
 
 	var apiVersion int
-	if strings.HasPrefix(apiRequest.Model, "gpt-3.5") {
+	if token == "" || strings.HasPrefix(apiRequest.Model, "gpt-3.5") {
 		apiVersion = 3
 		chatgptRequest.Model = "text-davinci-002-render-sha"
 	} else if strings.HasPrefix(apiRequest.Model, "gpt-4") {
@@ -238,14 +243,24 @@ func NewChatGPTRequest() chatgpt.CreateConversationRequest {
 		ParentMessageID:            uuid.NewString(),
 		Model:                      "text-davinci-002-render-sha",
 		HistoryAndTrainingDisabled: !enableHistory,
+		VariantPurpose:             "none",
 	}
 }
 
-func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationRequest, accessToken string, chatRequirementsToken string) (*http.Response, bool) {
+func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationRequest, accessToken string, chatRequirementsToken string, uid string) (*http.Response, bool) {
 	jsonBytes, _ := json.Marshal(request)
-	req, _ := http.NewRequest(http.MethodPost, api.ChatGPTApiUrlPrefix+"/backend-api/conversation", bytes.NewBuffer(jsonBytes))
+
+	urlPrefix := ""
+
+	if accessToken == "" {
+		urlPrefix = chatgpt.AnonPrefix
+	} else {
+		urlPrefix = chatgpt.ApiPrefix
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/conversation", bytes.NewBuffer(jsonBytes))
 	req.Header.Set("User-Agent", api.UserAgent)
-	req.Header.Set(api.AuthorizationHeader, accessToken)
+
 	req.Header.Set("Accept", "text/event-stream")
 	if request.ArkoseToken != "" {
 		req.Header.Set("Openai-Sentinel-Arkose-Token", request.ArkoseToken)
@@ -253,14 +268,21 @@ func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationR
 	if chatRequirementsToken != "" {
 		req.Header.Set("Openai-Sentinel-Chat-Requirements-Token", chatRequirementsToken)
 	}
-	if api.PUID != "" {
-		req.Header.Set("Cookie", "_puid="+api.PUID+";")
+	if accessToken != "" {
+		req.Header.Set(api.AuthorizationHeader, accessToken)
+		if api.PUID != "" {
+			req.Header.Set("Cookie", "_puid="+api.PUID+";")
+		}
+		if api.OAIDID != "" {
+			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
+			req.Header.Set("Oai-Device-Id", api.OAIDID)
+		}
+	} else if uid != "" {
+		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+uid)
+		req.Header.Set("Oai-Device-Id", uid)
 	}
 	req.Header.Set("Oai-Language", api.Language)
-	if api.OAIDID != "" {
-		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID)
-		req.Header.Set("Oai-Device-Id", api.OAIDID)
-	}
+
 	resp, err := api.Client.Do(req)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(err.Error()))

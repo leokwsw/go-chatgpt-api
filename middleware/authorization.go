@@ -42,10 +42,20 @@ func Authorization() gin.HandlerFunc {
 			authorization = c.GetHeader(api.XAuthorizationHeader)
 		}
 
+		customFreeToken := os.Getenv("CUSTOM_FREE_TOKEN")
+		if customFreeToken == "" {
+			customFreeToken = "python"
+		}
+
+		if authorization == "Bearer "+customFreeToken {
+			authorization = ""
+		}
+
 		if authorization == "" {
 			if strings.EqualFold(c.Request.Method, "POST") && (strings.EqualFold(c.Request.URL.Path, "/chatgpt/conversation") ||
 				strings.EqualFold(c.Request.URL.Path, "/chatgpt/backend-api/conversation") ||
-				strings.EqualFold(c.Request.URL.Path, "/api/conversation")) {
+				strings.EqualFold(c.Request.URL.Path, "/api/conversation") ||
+				strings.EqualFold(c.Request.URL.Path, "/imitate/v1/chat/completions")) {
 				c.Header("Content-Type", "application/json")
 			} else if c.Request.URL.Path == "/" {
 				c.Header("Content-Type", "text/plain")

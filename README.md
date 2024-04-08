@@ -2,6 +2,13 @@
 
 ## 此為個人維護版，與原版相比，有以下改動及根據OpenAI的更改而去改變
 
+### 2024-04-09
+
+- `imitate update`:support no auth conversation
+  - `POST /imitate/v1/chat/completions` with fixed token by env value named `CUSTOM_FREE_TOKEN`(default is `python`) : 
+    - openai lib not allow no token
+    - Sample Request [main.py](example%2Fpython%2Fmain.py)
+
 ### 2024-04-06
 
 - Update OpenAIAuth and funcaptcha library

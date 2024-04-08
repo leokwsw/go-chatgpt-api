@@ -99,6 +99,13 @@ func init() {
 
 	logger.Info("User-Agent : " + UserAgent)
 	logger.Info("Oai-Device-Id : " + OAIDID)
+
+	customFreeToken := os.Getenv("CUSTOM_FREE_TOKEN")
+	if customFreeToken == "" {
+		customFreeToken = "python"
+	}
+
+	logger.Info("Custom Token : " + customFreeToken)
 }
 
 func NewHttpClient() tls_client.HttpClient {

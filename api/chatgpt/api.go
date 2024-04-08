@@ -65,7 +65,15 @@ func GetConversations(c *gin.Context) {
 	if !ok {
 		limit = "20"
 	}
-	handleGet(c, ApiPrefix+"/conversations?offset="+offset+"&limit="+limit, getConversationsErrorMessage)
+	order, ok := c.GetQuery("order")
+	if !ok {
+		order = "updated"
+	}
+	isArchived, ok := c.GetQuery("is_archived")
+	if !ok {
+		isArchived = "false"
+	}
+	handleGet(c, ApiPrefix+"/conversations?offset="+offset+"&limit="+limit+"&order="+order+"&is_archived="+isArchived, getConversationsErrorMessage)
 }
 
 func CreateConversation(c *gin.Context) {
@@ -543,7 +551,7 @@ func GetChatRequirementsByAccessToken(accessToken string, uid string) (*ChatRequ
 
 	urlPrefix := ""
 
-	if accessToken == "Bearer " {
+	if accessToken == "Bearer " || accessToken == "" {
 		urlPrefix = AnonPrefix
 	} else {
 		urlPrefix = ApiPrefix
