@@ -1,6 +1,6 @@
 # go-chatgpt-api
 
-## 此為個人維護版，與原版相比，有以下改動及根據OpenAI的更改而去改變
+## This is a personal maintenance version. Compared with the original version, there are the following changes and changes based on changes in OpenAI.
 
 ### 2024-04-09
 
@@ -52,7 +52,7 @@ BASE_URL=http://localhost:8080/platform
 
 ---
 
-
+- [Python](example%2Fpython)
 
 ---
 
