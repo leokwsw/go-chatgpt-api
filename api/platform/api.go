@@ -142,11 +142,29 @@ func CreateModeration(c *gin.Context) {
 }
 
 func CreateTranscriptions(c *gin.Context) {
-	
+	var request CreateAudioTranscriptions
+	c.Bind(&request)
+	//data, _ := json.Marshal(request)
+	resp, err := handlePost(c, apiCreateAudioTranscriptions, []byte(fmt.Sprintf("%v", request)), false)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
 }
 
 func CreateSpeech(c *gin.Context) {
+	var request CreateAudioSpeech
+	c.ShouldBindJSON(&request)
+	data, _ := json.Marshal(request)
+	resp, err := handlePost(c, apiCreateAudioSpeech, data, false)
+	if err != nil {
+		return
+	}
 
+	defer resp.Body.Close()
+	io.Copy(c.Writer, resp.Body)
 }
 
 func ListFiles(c *gin.Context) {

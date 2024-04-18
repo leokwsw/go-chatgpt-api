@@ -5,4 +5,5 @@ chat.openai.com.har
 .idea
 harPool
 .DS_Store
-example/python/.venv
+.venv
+speech.mp3

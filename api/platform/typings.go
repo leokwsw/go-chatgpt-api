@@ -100,3 +100,21 @@ type CreateModerationRequest struct {
 	Model string `json:"model"`
 	Input string `json:"input"`
 }
+
+type CreateAudioTranscriptions struct {
+	File                   any      `form:"file"`
+	Model                  string   `form:"model"`
+	Language               string   `form:"language"`
+	Prompt                 string   `form:"prompt"`
+	ResponseFormat         string   `form:"response_format"`
+	Temperature            float32  `form:"temperature"`
+	TimestampGranularities []string `form:"timestamp_granularities"`
+}
+
+type CreateAudioSpeech struct {
+	Input          string `json:"input"`
+	Model          string `json:"model"`
+	Voice          string `json:"voice"`
+	ResponseFormat string `json:"response_format"`
+	Speech         string `json:"speech"`
+}
