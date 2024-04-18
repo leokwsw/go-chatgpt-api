@@ -1,5 +1,3 @@
-import os
-
 import openai
 
 PROMPT = "An eco-friendly computer from the 90s in the style of vaporwave"
@@ -12,5 +10,7 @@ response = openai.images.generate(
     n=1,
     size="256x256",
 )
-
-print(response.data[0].url)
+if hasattr(response, "error"):
+    print(response.error["message"])
+else:
+    print("url", response.data[0].url)
