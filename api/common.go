@@ -153,6 +153,9 @@ func Proxy(c *gin.Context) {
 	}
 	req.Header.Set("User-Agent", UserAgent)
 	req.Header.Set(AuthorizationHeader, GetAccessToken(c.GetHeader(AuthorizationHeader)))
+	req.Header.Set("Oai-Language", Language)
+	req.Header.Set("Oai-Device-Id", OAIDID)
+	req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+OAIDID)
 	resp, err := Client.Do(req)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, ReturnMessage(err.Error()))
@@ -215,42 +218,46 @@ func setupID() {
 
 				authenticator := auth.NewAuthenticator(username, password, ProxyUrl)
 				if err := authenticator.Begin(); err != nil {
-					//if err.Details == "missing access token" {
-					//	accessToken, err := ninja.Login(username, password)
+					//if os.Getenv("NINJA_URL") != "" {
+					//	if err.Details == "missing access token" {
+					//		accessToken, err := ninja.Login(username, password)
 					//
-					//	if err != nil {
+					//		if err != nil {
+					//			logger.Warn(fmt.Sprintf("%s: %s", refreshPuidErrorMessage, err.Details))
+					//			return
+					//		}
+					//
+					//		puid, oaidid := GetIDs(accessToken)
+					//
+					//		if puid == "" {
+					//			logger.Error(refreshPuidErrorMessage)
+					//			return
+					//		} else {
+					//			PUID = puid
+					//			logger.Info(fmt.Sprintf("PUID is updated"))
+					//		}
+					//
+					//		if oaidid == "" {
+					//			logger.Warn(refreshOaididErrorMessage)
+					//			//return
+					//		} else {
+					//			OAIDID = oaidid
+					//			logger.Info(fmt.Sprintf("OAIDID is updated"))
+					//		}
+					//
+					//		// store IMITATE_accessToken
+					//		IMITATE_accessToken = accessToken
+					//
+					//		time.Sleep(time.Hour * 24 * 7)
+					//
+					//	} else {
 					//		logger.Warn(fmt.Sprintf("%s: %s", refreshPuidErrorMessage, err.Details))
 					//		return
 					//	}
-					//
-					//	puid, oaidid := GetIDs(accessToken)
-					//
-					//	if puid == "" {
-					//		logger.Error(refreshPuidErrorMessage)
-					//		return
-					//	} else {
-					//		PUID = puid
-					//		logger.Info(fmt.Sprintf("PUID is updated"))
-					//	}
-					//
-					//	if oaidid == "" {
-					//		logger.Warn(refreshOaididErrorMessage)
-					//		//return
-					//	} else {
-					//		OAIDID = oaidid
-					//		logger.Info(fmt.Sprintf("OAIDID is updated"))
-					//	}
-					//
-					//	// store IMITATE_accessToken
-					//	IMITATE_accessToken = accessToken
-					//
-					//	time.Sleep(time.Hour * 24 * 7)
-					//
 					//} else {
 					logger.Warn(fmt.Sprintf("%s: %s", refreshPuidErrorMessage, err.Details))
 					return
 					//}
-
 				}
 
 				accessToken := authenticator.GetAccessToken()
@@ -259,13 +266,22 @@ func setupID() {
 					return
 				}
 
-				puid, err := authenticator.GetPUID()
-				if err != nil {
+				puid, oaidid := GetIDs(accessToken)
+				if puid == "" {
 					logger.Error(refreshPuidErrorMessage)
 					return
+				} else {
+					PUID = puid
+					logger.Info(fmt.Sprintf("PUID is updated"))
 				}
 
-				PUID = puid
+				if oaidid == "" {
+					logger.Warn(refreshOaididErrorMessage)
+					//return
+				} else {
+					OAIDID = oaidid
+					logger.Info(fmt.Sprintf("OAIDID is updated"))
+				}
 
 				// store IMITATE_accessToken
 				IMITATE_accessToken = accessToken
@@ -310,6 +326,7 @@ func setupID() {
 	} else {
 		PUID = os.Getenv("PUID")
 		IMITATE_accessToken = os.Getenv("IMITATE_ACCESS_TOKEN")
+		OAIDID = uuid.New().String()
 	}
 }
 
@@ -360,11 +377,16 @@ func GetIDs(accessToken string) (string, string) {
 		logger.Error("GetIDs: Missing access token")
 		return "", ""
 	}
+
+	// generate device id
+	oaidid = uuid.NewSHA1(uuid.MustParse("12345678-1234-5678-1234-567812345678"), []byte(accessToken)).String()
+
 	// Make request to https://chat.openai.com/backend-api/models
 	req, _ := http.NewRequest("GET", "https://chat.openai.com/backend-api/models?history_and_training_disabled=false", nil)
 	// Add headers
 	req.Header.Add(AuthorizationHeader, GetAccessToken(accessToken))
 	req.Header.Add("User-Agent", UserAgent)
+	req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+oaidid)
 
 	resp, err := NewHttpClient().Do(req)
 	if err != nil {
