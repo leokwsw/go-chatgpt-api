@@ -10,23 +10,28 @@ type UserLogin struct {
 }
 
 type CreateConversationRequest struct {
-	Action                     string           `json:"action"`
-	Messages                   []Message        `json:"messages"`
-	Model                      string           `json:"model"`
-	ParentMessageID            string           `json:"parent_message_id"`
-	ConversationID             *string          `json:"conversation_id"`
-	PluginIDs                  []string         `json:"plugin_ids"`
-	TimezoneOffsetMin          int              `json:"timezone_offset_min"`
-	ArkoseToken                string           `json:"arkose_token"`
-	VariantPurpose             string           `json:"variant_purpose"`
-	HistoryAndTrainingDisabled bool             `json:"history_and_training_disabled"`
-	ConversationMode           ConversationMode `json:"conversation_mode"`
-	ForceParagen               bool             `json:"force_paragen"`
-	ForceParagenModelSlug      string           `json:"force_paragen_model_slug"`
-	ForceNulligen              bool             `json:"force_nulligen"`
-	ForceRateLimit             bool             `json:"force_rate_limit"`
-	Suggestions                []string         `json:"suggestions"`
-	WebSocketRequestId         string           `json:"websocket_request_id"`
+	Action                     string    `json:"action"`
+	ConversationID             string    `json:"conversation_id,omitempty"`
+	ConversationMode           ConvMode  `json:"conversation_mode"`
+	ForceNulligen              bool      `json:"force_nulligen"`
+	ForceParagen               bool      `json:"force_paragen"`
+	ForceParagenModelSlug      string    `json:"force_paragen_model_slug"`
+	ForceRateLimit             bool      `json:"force_rate_limit"`
+	ForceUseSse                bool      `json:"force_use_sse"`
+	HistoryAndTrainingDisabled bool      `json:"history_and_training_disabled"`
+	Messages                   []Message `json:"messages"`
+	Model                      string    `json:"model"`
+	ParentMessageID            string    `json:"parent_message_id"`
+	ResetRateLimits            bool      `json:"reset_rate_limits"`
+	Suggestions                []string  `json:"suggestions"`
+	TimezoneOffsetMin          int       `json:"timezone_offset_min"`
+	VariantPurpose             string    `json:"variant_purpose"`
+	WebSocketRequestId         string    `json:"websocket_request_id"`
+}
+
+type ConvMode struct {
+	Kind    string `json:"kind"`
+	GizmoId string `json:"gizmo_id,omitempty"`
 }
 
 type ConversationMode struct {
@@ -145,11 +150,16 @@ func (c *CreateConversationRequest) AddMessage(role string, content string, meta
 }
 
 type ChatRequirements struct {
-	Token  string `json:"token"`
+	Token  string    `json:"token"`
+	Proof  ProofWork `json:"proofofwork,omitempty"`
 	Arkose struct {
 		Required bool   `json:"required"`
 		Dx       string `json:"dx,omitempty"`
 	} `json:"arkose"`
+	Turnstile struct {
+		Required bool   `json:"required"`
+		DX       string `json:"dx,omitempty"`
+	} `json:"turnstile"`
 }
 
 type GetModelsResponse struct {

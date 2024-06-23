@@ -16,7 +16,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	accessToken, _, _, statusCode, errStr := LoginWithUsernameAndPassword(loginInfo.Username, loginInfo.Password)
+	accessToken, _, statusCode, errStr := LoginWithUsernameAndPassword(loginInfo.Username, loginInfo.Password)
 
 	if len(errStr) > 0 {
 		c.AbortWithStatusJSON(statusCode, api.ReturnMessage(errStr))
@@ -30,25 +30,25 @@ func Login(c *gin.Context) {
 	})
 }
 
-func LoginWithUsernameAndPassword(username string, password string) (string, string, string, int, string) {
+func LoginWithUsernameAndPassword(username string, password string) (string, string, int, string) {
 	if os.Getenv("NINJA_URL") != "" {
 		authToken, err := ninja.Login(username, password)
 
 		if err != nil {
-			return "", "", "", err.StatusCode, err.Details
+			return "", "", err.StatusCode, err.Details
 		}
 
-		puid, oaidid := api.GetIDs(authToken)
+		puid := api.GetPUID(authToken)
 
-		return authToken, puid, oaidid, 200, ""
+		return authToken, puid, 200, ""
 	} else {
 		authenticator := auth.NewAuthenticator(username, password, api.ProxyUrl)
 		if err := authenticator.Begin(); err != nil {
-			return "", "", "", err.StatusCode, err.Details
+			return "", "", err.StatusCode, err.Details
 		}
 
-		puid, oaidid := api.GetIDs(authenticator.GetAccessToken())
+		puid := api.GetPUID(authenticator.GetAccessToken())
 
-		return authenticator.GetAccessToken(), puid, oaidid, 200, ""
+		return authenticator.GetAccessToken(), puid, 200, ""
 	}
 }

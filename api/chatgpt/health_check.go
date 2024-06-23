@@ -14,7 +14,7 @@ import (
 const (
 	healthCheckUrl = ApiPrefix + "/accounts/check"
 	readyHint      = "Service go-chatgpt-api is ready."
-	errorHintBlock = "Looks like you have bean blocked -> curl https://chat.openai.com | grep '<p>' | awk '{$1=$1;print}'"
+	errorHintBlock = "Looks like you have bean blocked -> curl https://chatgpt.com | grep '<p>' | awk '{$1=$1;print}'"
 	errorHint403   = "Failed to handle 403."
 	sleepHours     = 8760 // 365 days
 )

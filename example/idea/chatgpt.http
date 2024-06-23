@@ -284,7 +284,7 @@ Content-Type: application/json
 
 ### get auth provide
 
-GET https://chat.openai.com/api/auth/providers
+GET https://chatgpt.com/api/auth/providers
 
 ### region GPTs
 

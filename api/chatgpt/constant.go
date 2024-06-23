@@ -2,10 +2,10 @@ package chatgpt
 
 const (
 	defaultRole                    = "user"
-	PublicApiPrefix                = "https://chat.openai.com/public-api"
+	PublicApiPrefix                = "https://chatgpt.com/public-api"
 	conversationLimit              = PublicApiPrefix + "/conversation_limit"
-	ApiPrefix                      = "https://chat.openai.com/backend-api"
-	AnonPrefix                     = "https://chat.openai.com/backend-anon"
+	ApiPrefix                      = "https://chatgpt.com/backend-api"
+	AnonPrefix                     = "https://chatgpt.com/backend-anon"
 	updateMySettingErrorMessage    = "Failed to update setting"
 	getMySettingErrorMessage       = "Failed to get setting"
 	getSynthesizeErrorMessage      = "Failed to get synthesize."

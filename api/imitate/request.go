@@ -15,10 +15,9 @@ type ContinueInfo struct {
 }
 
 type APIRequest struct {
-	Messages  []ApiMessage `json:"messages"`
-	Stream    bool         `json:"stream"`
-	Model     string       `json:"model"`
-	PluginIDs []string     `json:"plugin_ids"`
+	Messages []ApiMessage `json:"messages"`
+	Stream   bool         `json:"stream"`
+	Model    string       `json:"model"`
 }
 
 type ApiMessage struct {

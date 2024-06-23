@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	http "github.com/bogdanfinn/fhttp"
+	"github.com/bogdanfinn/tls-client/profiles"
+	tls "github.com/bogdanfinn/utls"
 	"github.com/gorilla/websocket"
 	"github.com/leokwsw/go-chatgpt-api/api"
+	"golang.org/x/net/proxy"
+	"net"
+	"net/url"
 	"time"
 )
 
@@ -23,7 +28,7 @@ func InitWebSocketConnect(token string, uuid string) error {
 		if err != nil {
 			return err
 		}
-		CreateWebSocketConnection(wssURL, connectInfo, 0)
+		err = CreateWebSocketConnection(wssURL, connectInfo, 0)
 		if err != nil {
 			return err
 		}
@@ -99,19 +104,42 @@ func getWebSocketURL(token string, retry int) (string, error) {
 	return webSocketResp.WssUrl, nil
 }
 
-func CreateWebSocketConnection(url string, connectInfo *api.ConnectInfo, retry int) error {
-	dialer := websocket.DefaultDialer
+type rawDialer interface {
+	Dial(network string, addr string) (c net.Conn, err error)
+}
+
+func CreateWebSocketConnection(addr string, connectInfo *api.ConnectInfo, retry int) error {
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 8 * time.Second,
+		NetDialTLSContext: func(ctx context.Context, network string, addr string) (net.Conn, error) {
+			host, _, _ := net.SplitHostPort(addr)
+			config := &tls.Config{ServerName: host, OmitEmptyPsk: true}
+			var rawDial rawDialer
+			if api.ProxyUrl != "" {
+				proxyURL, _ := url.Parse(api.ProxyUrl)
+				rawDial, _ = proxy.FromURL(proxyURL, proxy.Direct)
+			} else {
+				rawDial = &net.Dialer{}
+			}
+			dialConn, err := rawDial.Dial(network, addr)
+			if err != nil {
+				return nil, err
+			}
+			client := tls.UClient(dialConn, config, profiles.Okhttp4Android13.GetClientHelloId(), false, true)
+			return client, nil
+		},
+	}
 	dialer.EnableCompression = true
 	dialer.Subprotocols = []string{WebSocketProtocols}
 
-	connect, _, err := dialer.Dial(url, nil)
+	connect, _, err := dialer.Dial(addr, nil)
 
 	if err != nil {
 		if retry > 3 {
 			return err
 		}
 		time.Sleep(time.Second) // wait 1s to recreate w
-		return CreateWebSocketConnection(url, connectInfo, retry+1)
+		return CreateWebSocketConnection(addr, connectInfo, retry+1)
 	}
 
 	connectInfo.Connect = connect
@@ -140,4 +168,12 @@ func FindSpecConnection(token string, uuid string) *api.ConnectInfo {
 		}
 	}
 	return &api.ConnectInfo{}
+}
+
+func UnlockSpecConn(token string, uuid string) {
+	for _, value := range api.ConnectPool[token] {
+		if value.Uuid == uuid {
+			value.Lock = false
+		}
+	}
 }

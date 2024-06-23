@@ -38,7 +38,7 @@
    with .har suffix) to complete captcha verification.
     1. Use a Chromium-based browser (Chrome, Edge) to open the browser developer tools (F12), switch to the Network tab,
        and check the preserve log option.
-    2. Log in to `https://chat.openai.com/`, create a new chat and select the GPT-4 model, enter any text, switch to the
+    2. Log in to `https://chatgpt.com/`, create a new chat and select the GPT-4 model, enter any text, switch to the
        GPT-3.5 model, and enter any text.
     3. Click the Export HAR button under the Network tab to export the file chat.openai.com.har and place it in
        the `harPool` folder of the same level as this program.
@@ -73,7 +73,7 @@ BASE_URL=http://localhost:8080/platform
 
 ### 支持接口
 
-- https://chat.openai.com/auth/login 登录返回 `accessToken`（谷歌和微软账号暂不支持登录，但可正常使用其他接口）
+- https://chatgpt.com/auth/login 登录返回 `accessToken`（谷歌和微软账号暂不支持登录，但可正常使用其他接口）
 - 模型和插件查询
 - `GPT-3.5` 和 `GPT-4` 对话增删改查及分享
 - https://platform.openai.com/playground 登录返回 `apiKey`
