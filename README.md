@@ -2,6 +2,21 @@
 
 ## This is a personal maintenance version. Compared with the original version, there are the following changes and changes based on changes in OpenAI.
 
+### 2024-07-10
+
+- Long time no update
+- Update UserAgent
+- added TurnstileToken Generation for testing
+- remove used cookie
+- add error for Chat Requirements
+- POW Algo Editing
+- Add env variables
+    - POW_RETRY_TIMES - Reacquire POW Seed (default: 0)
+    - POW_MAX_DIFFICULTY - POW Highest Difficulty Setting (default: "000032")
+    - HARDWARE - Count of CPU Cores + Screen Width + Screen Height (default: random number)
+    - POW_MAX_CALC_TIMES - cpu max calc times, trying To Reduce the probability of 403 errors (default: 500000)
+    - PROCESS_TURNSTILE (set to "true" to enable gen turnstile token)
+
 ### 2024-04-19
 
 - Added audio transcription and speech creation functionality
