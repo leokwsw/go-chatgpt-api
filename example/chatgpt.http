@@ -12,7 +12,7 @@ GET {{baseUrl}}/chatgpt/backend-api/conversations?offset=0&limit=3&order=updated
 Authorization: Bearer {{accessToken}}
 
 ### get conversation
-GET {{baseUrl}}/chatgpt/backend-api/conversation/id
+GET {{baseUrl}}/chatgpt/backend-api/conversation/{{conversation_id}}
 Authorization: Bearer {{accessToken}}
 
 ### create conversation
