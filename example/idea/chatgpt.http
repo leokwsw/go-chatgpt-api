@@ -435,5 +435,35 @@ Content-Type: application/json
   "timezone_offset_min": -480
 }
 
+### Message Compare feedback 2
+POST {{baseUrl}}/chatgpt/backend-api/conversation/message_comparison_feedback
+accept: */*
+authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "feedback_version": "skippable_parallel_2_in_stream:a:1.0",
+  "original_message_id": "728731bc-3b9c-42f9-bef5-d113c071ee51",
+  "new_message_id": "2a0b1ce3-d6db-438f-81a9-594efd705f2b",
+  "rating": "none",
+  "conversation_id": "0da37e98-b64e-46f8-b54f-bd45b23c7009",
+  "text": "",
+  "tags": [],
+  "completion_comparison_rating": "original",
+  "new_completion_placement": "left",
+  "feedback_start_time": 1722163198207,
+  "compare_step_start_time": 1722163198207,
+  "original_completion_load_start_time": 1722163198207,
+  "original_completion_load_end_time": 1722163226108,
+  "new_completion_load_start_time": 1722163198207,
+  "new_completion_load_end_time": 1722163226108,
+  "frontend_submission_time": 1722163230996,
+  "timezone_offset_min": -480,
+  "left_visibility_initial": 1,
+  "left_visibility_max": 1,
+  "right_visibility_initial": 1,
+  "right_visibility_max": 1
+}
+
 ###
 
