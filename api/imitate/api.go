@@ -263,14 +263,17 @@ func generateId() string {
 func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired bool, chatRequirementsArkoseDx string, token string) chatgpt.CreateConversationRequest {
 	chatgptRequest := NewChatGPTRequest()
 
-	if token == "" || strings.HasPrefix(apiRequest.Model, "gpt-3.5") {
-		chatgptRequest.Model = "text-davinci-002-render-sha"
-	} else if strings.HasPrefix(apiRequest.Model, "gpt-4") {
-		chatgptRequest.Model = "gpt-4"
-		if strings.HasPrefix(apiRequest.Model, "gpt-4o") {
-			chatgptRequest.Model = "gpt-4o"
+	if token == "" {
+		chatgptRequest.Model = "gpt-4o-mini"
+	} else {
+		if strings.HasPrefix(apiRequest.Model, "gpt-4") {
+			chatgptRequest.Model = "gpt-4"
+			if strings.HasPrefix(apiRequest.Model, "gpt-4o") {
+				chatgptRequest.Model = "gpt-4o"
+			}
 		}
 	}
+
 	matches := gptsRegexp.FindStringSubmatch(apiRequest.Model)
 	if len(matches) == 2 {
 		chatgptRequest.ConversationMode.Kind = "gizmo_interaction"
