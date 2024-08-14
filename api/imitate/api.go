@@ -263,7 +263,7 @@ func generateId() string {
 func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired bool, chatRequirementsArkoseDx string, token string) chatgpt.CreateConversationRequest {
 	chatgptRequest := NewChatGPTRequest()
 
-	if token == "" {
+	if token == "" || strings.HasPrefix(apiRequest.Model, "gpt-4") {
 		chatgptRequest.Model = "gpt-4o-mini"
 	} else {
 		if strings.HasPrefix(apiRequest.Model, "gpt-4") {
