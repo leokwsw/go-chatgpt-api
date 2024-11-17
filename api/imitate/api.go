@@ -263,15 +263,18 @@ func generateId() string {
 func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired bool, chatRequirementsArkoseDx string, token string) chatgpt.CreateConversationRequest {
 	chatgptRequest := NewChatGPTRequest()
 
-	if token == "" || strings.HasPrefix(apiRequest.Model, "gpt-4") {
+	if strings.HasPrefix(apiRequest.Model, "gpt-4o-mini") {
 		chatgptRequest.Model = "gpt-4o-mini"
-	} else {
-		if strings.HasPrefix(apiRequest.Model, "gpt-4") {
-			chatgptRequest.Model = "gpt-4"
-			if strings.HasPrefix(apiRequest.Model, "gpt-4o") {
-				chatgptRequest.Model = "gpt-4o"
-			}
-		}
+	} else if strings.HasPrefix(apiRequest.Model, "gpt-4o") {
+		chatgptRequest.Model = "gpt-4o"
+	} else if strings.HasPrefix(apiRequest.Model, "gpt-4") {
+		chatgptRequest.Model = "gpt-4"
+	} else if strings.HasPrefix(apiRequest.Model, "o1-preview") {
+		chatgptRequest.Model = "o1-preview"
+	} else if strings.HasPrefix(apiRequest.Model, "o1-mini") {
+		chatgptRequest.Model = "o1-mini"
+	} else if strings.HasPrefix(apiRequest.Model, "o1") {
+		chatgptRequest.Model = "o1"
 	}
 
 	matches := gptsRegexp.FindStringSubmatch(apiRequest.Model)
