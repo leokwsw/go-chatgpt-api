@@ -10,23 +10,41 @@ type UserLogin struct {
 }
 
 type CreateConversationRequest struct {
-	Action                     string    `json:"action"`
-	ConversationID             string    `json:"conversation_id,omitempty"`
-	ConversationMode           ConvMode  `json:"conversation_mode"`
-	ForceNulligen              bool      `json:"force_nulligen"`
-	ForceParagen               bool      `json:"force_paragen"`
-	ForceParagenModelSlug      string    `json:"force_paragen_model_slug"`
-	ForceRateLimit             bool      `json:"force_rate_limit"`
-	ForceUseSse                bool      `json:"force_use_sse"`
-	HistoryAndTrainingDisabled bool      `json:"history_and_training_disabled"`
-	Messages                   []Message `json:"messages"`
-	Model                      string    `json:"model"`
-	ParentMessageID            string    `json:"parent_message_id"`
-	ResetRateLimits            bool      `json:"reset_rate_limits"`
-	Suggestions                []string  `json:"suggestions"`
-	TimezoneOffsetMin          int       `json:"timezone_offset_min"`
-	VariantPurpose             string    `json:"variant_purpose"`
-	WebSocketRequestId         string    `json:"websocket_request_id"`
+	Action                           string               `json:"action"`
+	ClientContextualInfo             ClientContextualInfo `json:"client_contextual_info"`
+	ConversationMode                 ConvMode             `json:"conversation_mode"`
+	ConversationID                   string               `json:"conversation_id,omitempty"`
+	ConversationOrigin               string               `json:"conversation_origin,omitempty"`
+	ForceNulligen                    bool                 `json:"force_nulligen"`
+	ForceParagen                     bool                 `json:"force_paragen"`
+	ForceParagenModelSlug            string               `json:"force_paragen_model_slug"`
+	ForceRateLimit                   bool                 `json:"force_rate_limit"`
+	ForceUseSse                      bool                 `json:"force_use_sse"`
+	HistoryAndTrainingDisabled       bool                 `json:"history_and_training_disabled"`
+	Messages                         []Message            `json:"messages"`
+	ParagenCotSummaryDisplayOverride string               `json:"paragen_cot_summary_display_override"`
+	ParagenStreamTypeOverride        string               `json:"paragen_stream_type_override,omitempty"`
+	Model                            string               `json:"model"`
+	ParentMessageID                  string               `json:"parent_message_id"`
+	ResetRateLimits                  bool                 `json:"reset_rate_limits"`
+	Suggestions                      []string             `json:"suggestions"`
+	SupportedEncodings               []string             `json:"supported_encodings"`
+	SupportBuffering                 string               `json:"supports_buffering"`
+	SystemHints                      []string             `json:"system_hints"`
+	Timezone                         string               `json:"timezone"`
+	TimezoneOffsetMin                int                  `json:"timezone_offset_min"`
+	VariantPurpose                   string               `json:"variant_purpose"`
+	WebSocketRequestId               string               `json:"websocket_request_id"`
+}
+
+type ClientContextualInfo struct {
+	IsDarkMode      bool `json:"is_dark_mode"`
+	PageHeight      int  `json:"page_height"`
+	PageWidth       int  `json:"page_width"`
+	PixelRation     int  `json:"pixel_ration"`
+	ScreenHeight    int  `json:"screen_height"`
+	ScreenWidth     int  `json:"screen_width"`
+	TimeSinceLoaded int  `json:"time_since_loaded"`
 }
 
 type ConvMode struct {
@@ -42,9 +60,10 @@ type ConversationMode struct {
 type Message struct {
 	Author Author `json:"author"`
 	//Role     string      `json:"role"`
-	Content  Content     `json:"content"`
-	ID       string      `json:"id"`
-	Metadata interface{} `json:"metadata"`
+	Content    Content     `json:"content"`
+	CreateTime int         `json:"create_time"`
+	ID         string      `json:"id"`
+	Metadata   interface{} `json:"metadata"`
 }
 
 type MessageMetadata struct {

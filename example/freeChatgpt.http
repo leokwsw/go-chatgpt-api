@@ -1,30 +1,62 @@
 ### create conversation
 #POST {{baseUrl}}/chatgpt/backend-api/conversation
 #POST {{baseUrl}}/chatgpt/conversation
-POST {{baseUrl}}/api/conversation
+#POST {{baseUrl}}/api/conversation
+POST https://chatgpt-proxy.leonardpark.dev/api/conversation
 Content-Type: application/json
 Accept: text/event-stream
 
 {
   "action": "next",
-  "conversation_mode": {
-    "kind": "primary_assistant"
-  },
-  "variant_purpose": "none",
   "messages": [
     {
-      "id": "{{$random.uuid}}",
+      "id": "aaa27a3c-e498-4fe5-ab1c-1b60e433f190",
       "author": {
         "role": "user"
       },
       "content": {
         "content_type": "text",
         "parts": [
-          "Hello"
+          "Give me some news about HK"
         ]
-      }
+      },
+      "metadata": {
+        "serialization_metadata": {
+          "custom_symbol_offsets": []
+        }
+      },
+      "create_time": 1731865506.298
     }
   ],
-  "model": "text-davinci-002-render-sha",
-  "timezone_offset_min": -480
+  "parent_message_id": "",
+  "model": "auto",
+  "timezone_offset_min": -480,
+  "timezone": "Asia/Hong_Kong",
+  "suggestions": [],
+  "history_and_training_disabled": false,
+  "conversation_mode": {
+    "kind": "primary_assistant"
+  },
+  "force_paragen": false,
+  "force_paragen_model_slug": "",
+  "force_rate_limit": false,
+  "reset_rate_limits": false,
+  "websocket_request_id": "",
+  "system_hints": [],
+  "supported_encodings": [
+    "v1"
+  ],
+  "conversation_origin": null,
+  "client_contextual_info": {
+    "is_dark_mode": true,
+    "time_since_loaded": 65,
+    "page_height": 968,
+    "page_width": 888,
+    "pixel_ratio": 1,
+    "screen_height": 1080,
+    "screen_width": 1920
+  },
+  "paragen_stream_type_override": null,
+  "paragen_cot_summary_display_override": "allow",
+  "supports_buffering": true
 }
