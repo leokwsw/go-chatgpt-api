@@ -6,22 +6,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
+	http "github.com/bogdanfinn/fhttp"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/leokwsw/go-chatgpt-api/api"
 	"github.com/leokwsw/go-chatgpt-api/api/chatgpt"
+	"github.com/linweiyuan/go-logger/logger"
 	"io"
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
-
-	http "github.com/bogdanfinn/fhttp"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/linweiyuan/go-logger/logger"
 )
 
 var (
@@ -77,18 +73,7 @@ func CreateChatCompletions(c *gin.Context) {
 	uid := uuid.NewString()
 	var chatRequirements *chatgpt.ChatRequirements
 	var p string
-	var waitGroup sync.WaitGroup
-	if token == "" {
-		waitGroup.Add(1)
-	} else {
-		waitGroup.Add(2)
-		go func() {
-			defer waitGroup.Done()
-			err = chatgpt.InitWebSocketConnect(token, uid)
-		}()
-	}
 	go func() {
-		defer waitGroup.Done()
 		chatRequirements, p, err = chatgpt.GetChatRequirementsByAccessToken(token, uid)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, api.ReturnMessage(err.Error()))
@@ -113,7 +98,6 @@ func CreateChatCompletions(c *gin.Context) {
 			}
 		}
 	}()
-	waitGroup.Wait()
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "unable to create ws tunnel"})
 		return
@@ -248,8 +232,6 @@ func CreateChatCompletions(c *gin.Context) {
 	} else {
 		c.String(200, "data: [DONE]\n\n")
 	}
-
-	chatgpt.UnlockSpecConn(token, uid)
 }
 
 func generateId() string {
@@ -423,90 +405,17 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 	var isRole = true
 	var waitSource = false
 	var imgSource []string
-	var isWebSocket = false
 	var convId string
 	var msgId string
-	var respId string
-	var wssUrl string
-	var connInfo *api.ConnectInfo
-	var wsSeq int
-	var isWSInterrupt bool = false
-	var interruptTimer *time.Timer
-	if !strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-		isWebSocket = true
-		connInfo = chatgpt.FindSpecConnection(token, uuid)
-		if connInfo.Connect == nil {
-			c.JSON(500, gin.H{"error": "No websocket connection"})
-			return "", nil
-		}
-		var wssResponse chatgpt.WebSocketResponse
-		json.NewDecoder(resp.Body).Decode(&wssResponse)
-		wssUrl = wssResponse.WssUrl
-		respId = wssResponse.ResponseId
-		convId = wssResponse.ConversationId
-	}
 	for {
 		var line string
 		var err error
-		if isWebSocket {
-			var messageType int
-			var message []byte
-			if isWSInterrupt {
-				if interruptTimer == nil {
-					interruptTimer = time.NewTimer(10 * time.Second)
-				}
-				select {
-				case <-interruptTimer.C:
-					c.JSON(500, gin.H{"error": "WS interrupt & new WS timeout"})
-					return "", nil
-				default:
-					goto reader
-				}
+		line, err = reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
 			}
-		reader:
-			messageType, message, err = connInfo.Connect.ReadMessage()
-			if err != nil {
-				connInfo.Ticker.Stop()
-				connInfo.Connect.Close()
-				connInfo.Connect = nil
-				err := chatgpt.CreateWebSocketConnection(wssUrl, connInfo, 0)
-				if err != nil {
-					c.JSON(500, gin.H{"error": err.Error()})
-					return "", nil
-				}
-				isWSInterrupt = true
-				connInfo.Connect.WriteMessage(websocket.TextMessage, []byte("{\"type\":\"sequenceAck\",\"sequenceId\":"+strconv.Itoa(wsSeq)+"}"))
-				continue
-			}
-			if messageType == websocket.TextMessage {
-				var wssMsgResponse chatgpt.WebSocketMessageResponse
-				json.Unmarshal(message, &wssMsgResponse)
-				if wssMsgResponse.Data.ResponseId != respId {
-					continue
-				}
-				wsSeq = wssMsgResponse.SequenceId
-				if wsSeq%50 == 0 {
-					connInfo.Connect.WriteMessage(websocket.TextMessage, []byte("{\"type\":\"sequenceAck\",\"sequenceId\":"+strconv.Itoa(wsSeq)+"}"))
-				}
-				base64Body := wssMsgResponse.Data.Body
-				bodyByte, err := base64.StdEncoding.DecodeString(base64Body)
-				if err != nil {
-					continue
-				}
-				if isWSInterrupt {
-					isWSInterrupt = false
-					interruptTimer.Stop()
-				}
-				line = string(bodyByte)
-			}
-		} else {
-			line, err = reader.ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				return "", nil
-			}
+			return "", nil
 		}
 		if len(line) < 6 {
 			continue
@@ -639,9 +548,6 @@ func Handler(c *gin.Context, resp *http.Response, token string, uuid string, str
 			if stream {
 				finalLine := StopChunk(finishReason)
 				c.Writer.WriteString("data: " + finalLine.String() + "\n\n")
-			}
-			if isWebSocket {
-				break
 			}
 		}
 	}

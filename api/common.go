@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"github.com/xqdoo00o/OpenAIAuth/auth"
 	"github.com/xqdoo00o/funcaptcha"
 	"io"
@@ -57,14 +56,6 @@ const (
 	Language = "en-US"
 )
 
-type ConnectInfo struct {
-	Connect *websocket.Conn
-	Uuid    string
-	Expire  time.Time
-	Ticker  *time.Ticker
-	Lock    bool
-}
-
 var (
 	Client              tls_client.HttpClient
 	ArkoseClient        tls_client.HttpClient
@@ -72,7 +63,6 @@ var (
 	OAIDID              string
 	ProxyUrl            string
 	IMITATE_accessToken string
-	ConnectPool         = map[string][]*ConnectInfo{}
 	StartTime           = time.Now()
 )
 

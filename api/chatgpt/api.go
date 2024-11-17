@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"github.com/linweiyuan/go-logger/logger"
 	"golang.org/x/crypto/sha3"
 	"io"
-	"log"
 	"math/rand"
 	"os"
 	"strconv"
@@ -24,7 +22,6 @@ import (
 	"github.com/leokwsw/go-chatgpt-api/api"
 
 	http "github.com/bogdanfinn/fhttp"
-	http2 "net/http"
 )
 
 var (
@@ -607,124 +604,42 @@ func handleConversationResponse(c *gin.Context, resp *http.Response, request Cre
 	defer resp.Body.Close()
 	reader := bufio.NewReader(resp.Body)
 
-	if !strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-		readStr, _ := reader.ReadString(' ')
+	for {
+		if c.Request.Context().Err() != nil {
+			break
+		}
 
-		var webSocketResponse WebSocketResponse
-		json.Unmarshal([]byte(readStr), &webSocketResponse)
-		wssUrlStr := webSocketResponse.WssUrl
-
-		//fmt.Println("WebSocket Url : " + wssUrlStr)
-
-		webSocketSubProtocols := []string{WebSocketProtocols}
-
-		dialer := websocket.DefaultDialer
-		wssRequest, err := http.NewRequest("GET", wssUrlStr, nil)
+		line, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal("Error creating request:", err)
+			break
 		}
-		wssRequest.Header.Add("Sec-WebSocket-Protocol", webSocketSubProtocols[0])
 
-		connect, _, err := dialer.Dial(wssUrlStr, http2.Header(wssRequest.Header))
-		if err != nil {
-			log.Fatal("Error dialing:", err)
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "event") ||
+			strings.HasPrefix(line, "data: 20") ||
+			line == "" {
+			continue
 		}
-		defer connect.Close()
 
-		receiveMsgCount := 0
+		responseJson := line[6:]
+		if strings.HasPrefix(responseJson, "[DONE]") && isMaxTokens {
+			continue
+		}
 
-		for {
-			messageType, message, err := connect.ReadMessage()
-
-			if err != nil {
-				log.Println("Error reading message:", err)
-				break
-			}
-
-			switch messageType {
-			case websocket.TextMessage:
-				//log.Printf("Received Text Message: %s", message)
-				var wssConversationResponse WebSocketMessageResponse
-				json.Unmarshal(message, &wssConversationResponse)
-
-				sequenceId := wssConversationResponse.SequenceId
-
-				sequenceMsg := WSSSequenceAckMessage{
-					Type:       "sequenceAck",
-					SequenceId: sequenceId,
-				}
-				sequenceMsgStr, err := json.Marshal(sequenceMsg)
-
-				base64Body := wssConversationResponse.Data.Body
-				bodyByte, err := base64.StdEncoding.DecodeString(base64Body)
-
-				if err != nil {
-					return
-				}
-				body := string(bodyByte[:])
-
-				if len(body) > 0 {
-					c.Writer.Write([]byte(body))
-					c.Writer.Flush()
-				}
-
-				if strings.Contains(body[:], "[DONE]") {
-					connect.WriteMessage(websocket.TextMessage, sequenceMsgStr)
-					connect.Close()
-					return
-				}
-
-				receiveMsgCount++
-
-				if receiveMsgCount > 10 {
-					connect.WriteMessage(websocket.TextMessage, sequenceMsgStr)
-				}
-
-			case websocket.BinaryMessage:
-				//log.Printf("Received Binary Message: %d bytes", len(message))
-			default:
-				//log.Printf("Received Other Message Type: %d", messageType)
+		// no need to unmarshal every time, but if response content has this "max_tokens", need to further check
+		if strings.TrimSpace(responseJson) != "" && strings.Contains(responseJson, responseTypeMaxTokens) {
+			var createConversationResponse CreateConversationResponse
+			json.Unmarshal([]byte(responseJson), &createConversationResponse)
+			message := createConversationResponse.Message
+			if message.Metadata.FinishDetails.Type == responseTypeMaxTokens && createConversationResponse.Message.Status == responseStatusFinishedSuccessfully {
+				isMaxTokens = true
+				continueParentMessageID = message.ID
+				continueConversationID = createConversationResponse.ConversationID
 			}
 		}
 
-	} else {
-		for {
-			if c.Request.Context().Err() != nil {
-				break
-			}
-
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				break
-			}
-
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "event") ||
-				strings.HasPrefix(line, "data: 20") ||
-				line == "" {
-				continue
-			}
-
-			responseJson := line[6:]
-			if strings.HasPrefix(responseJson, "[DONE]") && isMaxTokens {
-				continue
-			}
-
-			// no need to unmarshal every time, but if response content has this "max_tokens", need to further check
-			if strings.TrimSpace(responseJson) != "" && strings.Contains(responseJson, responseTypeMaxTokens) {
-				var createConversationResponse CreateConversationResponse
-				json.Unmarshal([]byte(responseJson), &createConversationResponse)
-				message := createConversationResponse.Message
-				if message.Metadata.FinishDetails.Type == responseTypeMaxTokens && createConversationResponse.Message.Status == responseStatusFinishedSuccessfully {
-					isMaxTokens = true
-					continueParentMessageID = message.ID
-					continueConversationID = createConversationResponse.ConversationID
-				}
-			}
-
-			c.Writer.Write([]byte(line + "\n\n"))
-			c.Writer.Flush()
-		}
+		c.Writer.Write([]byte(line + "\n\n"))
+		c.Writer.Flush()
 	}
 
 	if isMaxTokens {
