@@ -287,25 +287,13 @@ func convertAPIRequest(apiRequest APIRequest, chatRequirementsArkoseRequired boo
 func NewChatGPTRequest() chatgpt.CreateConversationRequest {
 	enableHistory := os.Getenv("ENABLE_HISTORY") == ""
 	return chatgpt.CreateConversationRequest{
-		Action:                           "next",
-		ParentMessageID:                  "client-created-root",
-		Model:                            "text-davinci-002-render-sha",
-		ClientPrepareState:               "success",
-		ConversationMode:                 chatgpt.ConvMode{Kind: "primary_assistant"},
-		EnableMessageFollowups:           true,
-		SystemHints:                      []string{},
-		SupportBuffering:                 true,
-		SupportedEncodings:               []string{"v1"},
-		ParagenCotSummaryDisplayOverride: "allow",
-		ForceParallelSwitch:              "auto",
-		HistoryAndTrainingDisabled:       !enableHistory,
-		Timezone:                         "Asia/Shanghai",
-		TimezoneOffsetMin:                -480,
-		ClientContextualInfo: chatgpt.ClientContextualInfo{
-			AppName: "chatgpt.com",
-		},
-		VariantPurpose:     "none",
-		WebSocketRequestId: uuid.NewString(),
+		Action:                     "next",
+		ParentMessageID:            uuid.NewString(),
+		Model:                      "text-davinci-002-render-sha",
+		HistoryAndTrainingDisabled: !enableHistory,
+		ConversationMode:           chatgpt.ConvMode{Kind: "primary_assistant"},
+		VariantPurpose:             "none",
+		WebSocketRequestId:         uuid.NewString(),
 	}
 }
 
@@ -320,7 +308,7 @@ func sendConversationRequest(c *gin.Context, request chatgpt.CreateConversationR
 		urlPrefix = chatgpt.ApiPrefix
 	}
 
-	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/f/conversation", bytes.NewBuffer(jsonBytes))
+	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/conversation", bytes.NewBuffer(jsonBytes))
 	req.Header.Set("User-Agent", api.UserAgent)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")

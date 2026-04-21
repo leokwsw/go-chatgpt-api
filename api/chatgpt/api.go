@@ -590,7 +590,7 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 	} else {
 		urlPrefix = ApiPrefix
 	}
-	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/f/conversation", bytes.NewBuffer(jsonBytes))
+	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/conversation", bytes.NewBuffer(jsonBytes))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", api.UserAgent)
 	if urlPrefix == ApiPrefix {
@@ -679,7 +679,7 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 			return nil, true
 		}
 
-		fmt.Printf("OpenAI Request Method : %s ; url : %s ; Status : %d\n\n", http.MethodPost, urlPrefix+"/f/conversation", resp.StatusCode)
+		fmt.Printf("OpenAI Request Method : %s ; url : %s ; Status : %d\n\n", http.MethodPost, urlPrefix+"/conversation", resp.StatusCode)
 		responseMap := make(map[string]interface{})
 		json.NewDecoder(resp.Body).Decode(&responseMap)
 

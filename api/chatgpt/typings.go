@@ -12,15 +12,12 @@ type UserLogin struct {
 type CreateConversationRequest struct {
 	Action                           string               `json:"action"`
 	ClientContextualInfo             ClientContextualInfo `json:"client_contextual_info"`
-	ClientPrepareState               string               `json:"client_prepare_state,omitempty"`
 	ConversationMode                 ConvMode             `json:"conversation_mode"`
 	ConversationID                   string               `json:"conversation_id,omitempty"`
 	ConversationOrigin               string               `json:"conversation_origin,omitempty"`
-	EnableMessageFollowups           bool                 `json:"enable_message_followups,omitempty"`
 	ForceNulligen                    bool                 `json:"force_nulligen"`
 	ForceParagen                     bool                 `json:"force_paragen"`
 	ForceParagenModelSlug            string               `json:"force_paragen_model_slug"`
-	ForceParallelSwitch              string               `json:"force_parallel_switch,omitempty"`
 	ForceRateLimit                   bool                 `json:"force_rate_limit"`
 	ForceUseSse                      bool                 `json:"force_use_sse"`
 	HistoryAndTrainingDisabled       bool                 `json:"history_and_training_disabled"`
@@ -32,7 +29,7 @@ type CreateConversationRequest struct {
 	ResetRateLimits                  bool                 `json:"reset_rate_limits"`
 	Suggestions                      []string             `json:"suggestions"`
 	SupportedEncodings               []string             `json:"supported_encodings"`
-	SupportBuffering                 bool                 `json:"supports_buffering"`
+	SupportBuffering                 string               `json:"supports_buffering"`
 	SystemHints                      []string             `json:"system_hints"`
 	Timezone                         string               `json:"timezone"`
 	TimezoneOffsetMin                int                  `json:"timezone_offset_min"`
@@ -41,14 +38,13 @@ type CreateConversationRequest struct {
 }
 
 type ClientContextualInfo struct {
-	AppName         string `json:"app_name,omitempty"`
-	IsDarkMode      bool   `json:"is_dark_mode"`
-	PageHeight      int    `json:"page_height"`
-	PageWidth       int    `json:"page_width"`
-	PixelRatio      int    `json:"pixel_ratio"`
-	ScreenHeight    int    `json:"screen_height"`
-	ScreenWidth     int    `json:"screen_width"`
-	TimeSinceLoaded int    `json:"time_since_loaded"`
+	IsDarkMode      bool `json:"is_dark_mode"`
+	PageHeight      int  `json:"page_height"`
+	PageWidth       int  `json:"page_width"`
+	PixelRation     int  `json:"pixel_ration"`
+	ScreenHeight    int  `json:"screen_height"`
+	ScreenWidth     int  `json:"screen_width"`
+	TimeSinceLoaded int  `json:"time_since_loaded"`
 }
 
 type ConvMode struct {
