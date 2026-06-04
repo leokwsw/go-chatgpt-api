@@ -33,6 +33,10 @@ REQUIREMENTS_PATHS = {
     "/backend-api/sentinel/chat-requirements",
     "/backend-anon/sentinel/chat-requirements",
 }
+TASKS_PATHS = {
+    "/backend-api/tasks",
+    "/backend-anon/tasks",
+}
 
 
 def _normalize_headers(headers: List[Dict[str, Any]]) -> Dict[str, str]:
@@ -97,7 +101,17 @@ def _is_replayable_conversation(payload: Any) -> bool:
     return required_keys.issubset(payload.keys())
 
 
-def extract_entries(har_data: Dict[str, Any], include_experimental: bool) -> List[Dict[str, Any]]:
+def _redact_header(value: str, include_sensitive_headers: bool) -> str:
+    if include_sensitive_headers or not value:
+        return value
+    return f"<redacted:{len(value)} chars>"
+
+
+def extract_entries(
+    har_data: Dict[str, Any],
+    include_experimental: bool,
+    include_sensitive_headers: bool = False,
+) -> List[Dict[str, Any]]:
     entries = har_data.get("log", {}).get("entries", [])
     extracted: List[Dict[str, Any]] = []
 
@@ -119,14 +133,27 @@ def extract_entries(har_data: Dict[str, Any], include_experimental: bool) -> Lis
                 "url": url,
                 "method": method,
                 "requestHeaders": {
-                    "authorization": headers.get("authorization", ""),
-                    "openai-sentinel-arkose-token": headers.get("openai-sentinel-arkose-token", ""),
-                    "openai-sentinel-chat-requirements-token": headers.get(
-                        "openai-sentinel-chat-requirements-token", ""
+                    "authorization": _redact_header(headers.get("authorization", ""), include_sensitive_headers),
+                    "openai-sentinel-arkose-token": _redact_header(
+                        headers.get("openai-sentinel-arkose-token", ""),
+                        include_sensitive_headers,
                     ),
-                    "openai-sentinel-proof-token": headers.get("openai-sentinel-proof-token", ""),
-                    "openai-sentinel-turnstile-token": headers.get("openai-sentinel-turnstile-token", ""),
-                    "oai-device-id": headers.get("oai-device-id", ""),
+                    "openai-sentinel-chat-requirements-token": _redact_header(
+                        headers.get("openai-sentinel-chat-requirements-token", ""),
+                        include_sensitive_headers,
+                    ),
+                    "openai-sentinel-proof-token": _redact_header(
+                        headers.get("openai-sentinel-proof-token", ""),
+                        include_sensitive_headers,
+                    ),
+                    "openai-sentinel-turnstile-token": _redact_header(
+                        headers.get("openai-sentinel-turnstile-token", ""),
+                        include_sensitive_headers,
+                    ),
+                    "oai-device-id": _redact_header(
+                        headers.get("oai-device-id", ""),
+                        include_sensitive_headers,
+                    ),
                     "oai-language": headers.get("oai-language", ""),
                     "user-agent": headers.get("user-agent", ""),
                     "origin": headers.get("origin", ""),
@@ -165,6 +192,61 @@ def collect_conversation_like_urls(har_data: Dict[str, Any]) -> List[str]:
     return ordered
 
 
+def _count_image_asset_pointers(value: Any) -> int:
+    if isinstance(value, dict):
+        count = 0
+        if value.get("content_type") == "image_asset_pointer" and value.get("asset_pointer"):
+            count += 1
+        return count + sum(_count_image_asset_pointers(v) for v in value.values())
+    if isinstance(value, list):
+        return sum(_count_image_asset_pointers(v) for v in value)
+    return 0
+
+
+def _summarize_task(task: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "task_id": task.get("task_id"),
+        "status": task.get("status"),
+        "conversation_id": task.get("conversation_id"),
+        "original_conversation_id": task.get("original_conversation_id"),
+        "response_message_id": task.get("response_message_id"),
+        "original_conversation_user_message_id": task.get("original_conversation_user_message_id"),
+        "has_image_gen_message": isinstance(task.get("image_gen_message"), dict),
+        "has_final_message": isinstance(task.get("final_message"), dict),
+        "messages_count": len(task.get("messages") or []),
+        "image_asset_pointer_count": _count_image_asset_pointers(task),
+    }
+
+
+def collect_task_summaries(har_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    summaries: List[Dict[str, Any]] = []
+    entries = har_data.get("log", {}).get("entries", [])
+    for item in entries:
+        req = item.get("request", {})
+        method = str(req.get("method", "")).upper()
+        if method != "GET":
+            continue
+        if _get_path(str(req.get("url", ""))) not in TASKS_PATHS:
+            continue
+        text = item.get("response", {}).get("content", {}).get("text")
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+        except Exception:
+            continue
+        tasks = payload.get("tasks") if isinstance(payload, dict) else None
+        if not isinstance(tasks, list):
+            continue
+        summaries.append(
+            {
+                "startedDateTime": item.get("startedDateTime"),
+                "tasks": [_summarize_task(t) for t in tasks if isinstance(t, dict)],
+            }
+        )
+    return summaries
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Extract ChatGPT conversation payloads from HAR.")
     parser.add_argument("--har", required=True, help="Path to HAR file.")
@@ -181,6 +263,11 @@ def main() -> None:
         action="store_true",
         help="When set, only output replayable conversation payloads (action/messages/model).",
     )
+    parser.add_argument(
+        "--include-sensitive-headers",
+        action="store_true",
+        help="Include raw authorization/sentinel/device headers. Defaults to redacted output.",
+    )
     args = parser.parse_args()
 
     har_path = Path(args.har)
@@ -190,10 +277,15 @@ def main() -> None:
     with har_path.open("r", encoding="utf-8") as f:
         har_data = json.load(f)
 
-    extracted = extract_entries(har_data, include_experimental=args.include_experimental)
+    extracted = extract_entries(
+        har_data,
+        include_experimental=args.include_experimental,
+        include_sensitive_headers=args.include_sensitive_headers,
+    )
     if not extracted:
         raise SystemExit("No matching entries found in HAR.")
     conversation_like_urls = collect_conversation_like_urls(har_data)
+    task_summaries = collect_task_summaries(har_data)
 
     output_obj: Any
     output_entries = extracted
@@ -229,6 +321,7 @@ def main() -> None:
             "total_output_entries": len(output_entries),
             "skipped_non_replayable_conversations": skipped_non_replayable,
             "conversation_like_urls_seen": conversation_like_urls,
+            "task_summaries": task_summaries,
             "hint": (
                 "No replayable /backend-api/conversation request found in this HAR. "
                 "Found fallback candidates under /backend-api/f/conversation. "

@@ -15,16 +15,37 @@ type ContinueInfo struct {
 }
 
 type APIRequest struct {
-	Messages       []ApiMessage `json:"messages"`
-	Stream         bool         `json:"stream"`
-	Model          string       `json:"model"`
-	ThinkingEffort string       `json:"thinking_effort,omitempty"`
+	Messages            []ApiMessage       `json:"messages"`
+	Stream              bool               `json:"stream"`
+	Model               string             `json:"model"`
+	ReasoningEffort     string             `json:"reasoning_effort,omitempty"`
+	ThinkingEffort      string             `json:"thinking_effort,omitempty"`
+	MaxTokens           *int               `json:"max_tokens,omitempty"`
+	MaxCompletionTokens *int               `json:"max_completion_tokens,omitempty"`
+	Temperature         *float64           `json:"temperature,omitempty"`
+	TopP                *float64           `json:"top_p,omitempty"`
+	N                   *int               `json:"n,omitempty"`
+	Stop                interface{}        `json:"stop,omitempty"`
+	PresencePenalty     *float64           `json:"presence_penalty,omitempty"`
+	FrequencyPenalty    *float64           `json:"frequency_penalty,omitempty"`
+	LogitBias           map[string]float64 `json:"logit_bias,omitempty"`
+	User                string             `json:"user,omitempty"`
+	Seed                *int64             `json:"seed,omitempty"`
+	ResponseFormat      interface{}        `json:"response_format,omitempty"`
+	Tools               interface{}        `json:"tools,omitempty"`
+	ToolChoice          interface{}        `json:"tool_choice,omitempty"`
+	ParallelToolCalls   *bool              `json:"parallel_tool_calls,omitempty"`
+	StreamOptions       interface{}        `json:"stream_options,omitempty"`
+	Metadata            interface{}        `json:"metadata,omitempty"`
+	Modalities          []string           `json:"modalities,omitempty"`
+	Audio               interface{}        `json:"audio,omitempty"`
+	Store               *bool              `json:"store,omitempty"`
 }
 
 type ApiMessage struct {
 	Role     string      `json:"role"`
 	Content  interface{} `json:"content"`
-	Metadata interface{} `json:"metadata"`
+	Metadata interface{} `json:"metadata,omitempty"`
 }
 
 func HandleRequestError(c *gin.Context, response *http.Response) bool {

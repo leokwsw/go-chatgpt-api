@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/leokwsw/go-chatgpt-api/api"
+	"github.com/linweiyuan/go-logger/logger"
 )
 
 const (
@@ -38,8 +39,17 @@ type AccessToken struct {
 func Authorization() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authorization := c.GetHeader(api.AuthorizationHeader)
+		authSource := api.AuthorizationHeader
 		if authorization == "" {
 			authorization = c.GetHeader(api.XAuthorizationHeader)
+			authSource = api.XAuthorizationHeader
+			if authorization != "" {
+				c.Request.Header.Set(api.AuthorizationHeader, authorization)
+			}
+		}
+		originalAuthorization := authorization
+		if authorization == "" {
+			authSource = "missing"
 		}
 
 		customFreeToken := os.Getenv("CUSTOM_FREE_TOKEN")
@@ -47,6 +57,7 @@ func Authorization() gin.HandlerFunc {
 			customFreeToken = "python"
 		}
 
+		customFreeTokenSeen := authorization == "Bearer "+customFreeToken || authorization == customFreeToken
 		if authorization == "Bearer "+customFreeToken {
 			authorization = ""
 		}
@@ -68,6 +79,7 @@ func Authorization() gin.HandlerFunc {
 				c.Abort()
 				return
 			} else {
+				logAuthorizationReject(c, originalAuthorization, authSource, customFreeToken, customFreeTokenSeen, "missing_or_blocked_authorization")
 				c.AbortWithStatusJSON(http.StatusUnauthorized, api.ReturnMessage(emptyAccessTokenErrorMessage))
 				return
 			}
@@ -75,6 +87,7 @@ func Authorization() gin.HandlerFunc {
 			c.Next()
 		} else {
 			if expired := isExpired(c); expired {
+				logAuthorizationReject(c, originalAuthorization, authSource, customFreeToken, customFreeTokenSeen, "expired_access_token")
 				c.AbortWithStatusJSON(http.StatusUnauthorized, api.ReturnMessage(fmt.Sprintf(accessTokenHasExpiredErrorMessage, c.GetString(api.EmailKey))))
 				return
 			}
@@ -82,6 +95,19 @@ func Authorization() gin.HandlerFunc {
 			c.Set(api.AuthorizationHeader, authorization)
 		}
 	}
+}
+
+func logAuthorizationReject(c *gin.Context, authHeader string, authSource string, customFreeToken string, customFreeTokenSeen bool, reason string) {
+	logger.Warn(fmt.Sprintf(
+		"[auth] reject stage=middleware method=%s path=%s client_ip=%s status=401 reason=%s custom_free_token_seen=%t %s %s",
+		c.Request.Method,
+		c.Request.URL.Path,
+		c.ClientIP(),
+		reason,
+		customFreeTokenSeen,
+		api.DescribeAuthorizationForLog(authHeader, authSource, customFreeToken).LogFields(),
+		api.ImitateAuthConfigLogFields(),
+	))
 }
 
 func isExpired(c *gin.Context) bool {

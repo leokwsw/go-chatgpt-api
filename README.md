@@ -46,6 +46,229 @@
 
 ---
 
+## `/imitate` 图片上传与图片问答
+
+`/imitate` 现在尽量对齐官方 OpenAI API 的这几条路径：
+
+- `GET /imitate/v1/models`
+- `GET /imitate/v1/models/{model}`
+- `POST /imitate/v1/files`
+- `GET /imitate/v1/files`
+- `GET /imitate/v1/files/{id}`
+- `GET /imitate/v1/files/{id}/content`
+- `DELETE /imitate/v1/files/{id}`
+- `POST /imitate/v1/chat/completions`
+- `POST /imitate/v1/responses`
+
+图片问答闭环支持几种主流调用方式：
+
+1. 先上传图片，拿到 `file_id`
+2. 用官方 `Responses API` 风格在 `input[].content` 中传 `input_image.file_id`
+3. 或者用官方 `Responses API` 风格直接传 `input_image.image_url`，支持 `https://...` 和 `data:image/...;base64,...`
+4. 或者用官方 `Chat Completions API` 风格直接传 `image_url.url`，支持 `https://...` 和 `data:image/...;base64,...`
+5. 服务端内部会把图片统一落到已验证的 `file_id -> image_asset_pointer + attachments` 链路
+6. 如果上游实际没有拿到图片上下文，回复应为精确字符串 `无图片`
+
+说明：`POST /imitate/v1/files` 对齐官方 Files API，只接受 `multipart/form-data` 的 `file` 上传，不接受 JSON/base64 作为 `/files` 请求体。`input_image.detail` / `image_url.detail` 可随官方形状传入；由于底层是 ChatGPT web 逆向链路，精确 detail 语义按上游实际能力尽力支持。
+
+### Model compatibility
+
+`/imitate` 使用 ChatGPT web backend 的模型 slug，不直接代理 Platform `/v1/models`。可用模型可以通过本地接口查询：
+
+```bash
+curl -sS http://127.0.0.1:8080/imitate/v1/models \
+  -H "Authorization: Bearer ${IMITATE_BEARER}"
+
+curl -sS http://127.0.0.1:8080/imitate/v1/models/gpt-5.5 \
+  -H "Authorization: Bearer ${IMITATE_BEARER}"
+```
+
+默认响应只返回官方模型对象字段：`id`、`object`、`created`、`owned_by`。排查内部映射时可以追加 `?debug=1` 查看 `chatgpt_model`、`thinking_effort`、`requires_prepare`、`compatibility_tag`。当前推荐默认模型是 `gpt-5-3`。模型名会先转小写，并把 `_` 归一化为 `-`。
+
+| 外部模型名 | ChatGPT backend model | 默认 thinking_effort | 说明 |
+| --- | --- | --- | --- |
+| `gpt-5-3`, `instant`, `none`, `gpt-5.5-none` | `gpt-5-3` | 空 | 无推理/快速模型 |
+| `gpt-5.5`, `gpt-5-5`, `thinking` | `gpt-5-5-thinking` | `standard` | 默认 thinking 模型 |
+| `gpt-5.5-low`, `thinking-low` | `gpt-5-5-thinking` | `min` | 低推理 |
+| `gpt-5.5-medium`, `thinking-medium` | `gpt-5-5-thinking` | `standard` | 中等推理 |
+| `gpt-5.5-high`, `thinking-high` | `gpt-5-5-thinking` | `extended` | 高推理 |
+| `gpt-5.5-xhigh`, `thinking-xhigh` | `gpt-5-5-thinking` | `max` | 最高推理 |
+| `gpt-5.5-pro`, `pro`, `pro-high` | `gpt-5-5-pro` | `standard` | Pro 默认/高推理 |
+| `gpt-5.5-pro-xhigh`, `pro-xhigh` | `gpt-5-5-pro` | `extended` | Pro 最高推理 |
+| `gpt-5.4`, `gpt-5-4` | `gpt-5-4-thinking` | 按请求字段 | legacy 兼容 |
+| `gpt-5.4-pro`, `gpt-5-4-pro` | `gpt-5-4-pro` | 按请求字段 | legacy 兼容 |
+| `gpt-4o`, `gpt-4o-mini`, `o1`, `o1-mini`, `o3`, `o4-mini`, `o4-mini-high` | 同名 slug | 按请求字段 | legacy 兼容 |
+
+`reasoning_effort` 和 `thinking_effort` 都可用；两者同时传且语义不同会返回 `invalid_request_error`。兼容值包括 `none/minimal`、`low/min`、`medium/med`、`high`、`xhigh/max/heavy`、`standard`、`extended`。
+
+注意：`/imitate/v1/chat/completions` 为保持旧行为，未知模型名会回落到默认 ChatGPT 模型 `text-davinci-002-render-sha`；`/imitate/v1/models/{model}` 会对未知模型返回 `model_not_found`，用于排查兼容性。
+
+### `/imitate` Authorization
+
+`/imitate/v1/files`、`/imitate/v1/chat/completions`、`/imitate/v1/responses` 接受两种 Bearer token：
+
+- 推荐：客户端传 `Authorization: Bearer ${IMITATE_API_KEY}`，服务端用 `.env` 中的 `IMITATE_ACCESS_TOKEN` 访问 ChatGPT。
+- 调试：直接传 ChatGPT access token，也就是形如 `eyJhbGciOiJSUzI1NiI...` 的 JWT。
+
+不要把官方 Platform key（`sk-...`）传给 `/imitate`。它不是 OpenAI Platform 代理，`/imitate/v1/files` 需要 ChatGPT access token 链路，传 `sk-...` 会返回 401。`CUSTOM_FREE_TOKEN` 只适合旧的免鉴权聊天兼容场景，不用于文件上传。
+
+### Files API
+
+上传文件：
+
+```bash
+IMITATE_BEARER='<your IMITATE_API_KEY or direct ChatGPT access token>'
+
+curl -sS http://127.0.0.1:8080/imitate/v1/files \
+  -H "Authorization: Bearer ${IMITATE_BEARER}" \
+  -F "purpose=vision" \
+  -F "file=@医疗.jpg"
+```
+
+支持官方 `purpose` 枚举：`assistants`、`batch`、`fine-tune`、`vision`、`user_data`、`evals`。也支持官方 `expires_after` 表单字段：
+
+```bash
+curl -sS http://127.0.0.1:8080/imitate/v1/files \
+  -H "Authorization: Bearer ${IMITATE_BEARER}" \
+  -F "purpose=vision" \
+  -F "expires_after[anchor]=created_at" \
+  -F "expires_after[seconds]=3600" \
+  -F "file=@医疗.jpg"
+```
+
+获取文件元数据、文件列表、文件内容：
+
+```bash
+curl -sS http://127.0.0.1:8080/imitate/v1/files/file_xxx \
+  -H "Authorization: Bearer ${IMITATE_BEARER}"
+
+curl -sS "http://127.0.0.1:8080/imitate/v1/files?purpose=vision&limit=20" \
+  -H "Authorization: Bearer ${IMITATE_BEARER}"
+
+curl -sS http://127.0.0.1:8080/imitate/v1/files/file_xxx/content \
+  -H "Authorization: Bearer ${IMITATE_BEARER}" \
+  --output downloaded.jpg
+```
+
+### Official Chat Completions Shape
+
+直接使用官方 `image_url` 形状：
+
+```bash
+curl -sS http://127.0.0.1:8080/imitate/v1/chat/completions \
+  -H "Authorization: Bearer ${IMITATE_BEARER}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5-3",
+    "stream": false,
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "text", "text": "请提取这张图片中的文字。"},
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/jpeg;base64,<base64>"
+            }
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+### Official Responses Shape
+
+先上传，再用官方 `input_image.file_id` 形状：
+
+```bash
+curl -sS http://127.0.0.1:8080/imitate/v1/responses \
+  -H "Authorization: Bearer ${IMITATE_BEARER}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5-3",
+    "input": [
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "请提取这张图片中的文字。"},
+          {"type": "input_image", "file_id": "file_xxx"}
+        ]
+      }
+    ]
+  }'
+```
+
+也可以直接使用官方 `input_image.image_url` 形状：
+
+```bash
+curl -sS http://127.0.0.1:8080/imitate/v1/responses \
+  -H "Authorization: Bearer ${IMITATE_BEARER}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5-3",
+    "input": [
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "请提取这张图片中的文字。"},
+          {
+            "type": "input_image",
+            "image_url": "data:image/jpeg;base64,<base64>",
+            "detail": "auto"
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+### Python SDK Example
+
+官方 Python SDK 示例见 [example/python/imitate_official_api.py](example/python/imitate_official_api.py)。
+
+环境变量示例：
+
+```bash
+export OPENAI_API_KEY='<your IMITATE_API_KEY or direct ChatGPT access token, not sk-*>'
+export BASE_URL='http://127.0.0.1:8080/imitate/v1'
+python example/python/imitate_official_api.py
+```
+
+### 验收脚本
+
+已有闭环验收脚本，验证“上传 -> `file_id` -> 图片问答 -> `无图片` 回退”：
+
+```bash
+python validate_imitate_image_e2e.py \
+  --token "${IMITATE_BEARER}" \
+  --expected-substring "<图片中的关键字>"
+```
+
+官方协议形状验收脚本，验证 `/files`、官方 `chat.completions` 图片输入、官方 `responses` 图片输入：
+
+```bash
+python validate_imitate_official_api.py \
+  --token "${IMITATE_BEARER}" \
+  --expected-substring "<图片中的关键字>" \
+  --expires-after-seconds 3600 \
+  --also-stream \
+  --also-responses-data-url \
+  --expect-no-image
+```
+
+如果你只想验证“图片没有进入上下文时是否严格回退到 `无图片`”，可以继续使用：
+
+```bash
+python validate_imitate_image_e2e.py \
+  --token "${IMITATE_BEARER}" \
+  --chat-file-id "file_does_not_exist" \
+  --expect-no-image
+```
+
 ## Setup
 
 1. Create Har file Pool folder : Currently logged in account, using the GPT-4 model and most GPT-3.5 models, you need to

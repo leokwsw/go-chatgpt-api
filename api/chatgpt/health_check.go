@@ -20,18 +20,20 @@ const (
 )
 
 func init() {
-	resp, err := healthCheck()
-	if err != nil {
-		logger.Error("Health check failed: " + err.Error())
-		os.Exit(1)
-	}
+	/*
+		resp, err := healthCheck()
+		if err != nil {
+			logger.Error("Health check failed: " + err.Error())
+			os.Exit(1)
+		}
 
-	checkHealthCheckStatus(resp)
+		checkHealthCheckStatus(resp)
+	*/
 }
 
 func healthCheck() (resp *http.Response, err error) {
 	req, _ := http.NewRequest(http.MethodGet, healthCheckUrl, nil)
-	req.Header.Set("User-Agent", api.UserAgent)
+	api.ApplyChatGPTBrowserHeaders(req, api.ChatGPTBrowserHeaderOptions{Accept: "*/*"})
 	resp, err = api.Client.Do(req)
 	return
 }

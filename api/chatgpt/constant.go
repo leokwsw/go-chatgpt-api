@@ -31,4 +31,7 @@ const (
 	responseStatusFinishedSuccessfully = "finished_successfully"
 	noModelPermissionErrorMessage      = "you have no permission to use this model"
 	WebSocketProtocols                 = "json.reliable.webpubsub.azure.v1"
+
+	oaiClientVersion     = "prod-4987068829830ddc3ae6683bd4e633f61b79dec9"
+	oaiClientBuildNumber = "6325146"
 )

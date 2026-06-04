@@ -1,9 +1,16 @@
 .env
+.env.*
+!.env.example
 go-chatgpt-api
 __debug*
 chat.openai.com.har
+*.har
 .idea
+.vscode
+.codex
 harPool
 .DS_Store
 .venv
 speech.mp3
+__pycache__/
+*.pyc

@@ -43,7 +43,7 @@ var (
 		"locks−[object LockManager]",
 		"appCodeName−Mozilla",
 		"permissions−[object Permissions]",
-		"appVersion−5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"appVersion−5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"share−function share() { [native code] }",
 		"webdriver−false",
 		"managed−[object NavigatorManagedData]",
@@ -72,9 +72,9 @@ var (
 		"login−[object NavigatorLogin]",
 		"vendorSub−",
 		"login−[object NavigatorLogin]",
-		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"getInstalledRelatedApps−function getInstalledRelatedApps() { [native code] }",
-		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"mediaDevices−[object MediaDevices]",
 		"locks−[object LockManager]",
 		"webkitGetUserMedia−function webkitGetUserMedia() { [native code] }",
@@ -82,7 +82,7 @@ var (
 		"xr−[object XRSystem]",
 		"mediaDevices−[object MediaDevices]",
 		"virtualKeyboard−[object VirtualKeyboard]",
-		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"virtualKeyboard−[object VirtualKeyboard]",
 		"appName−Netscape",
 		"storageBuckets−[object StorageBucketManager]",
@@ -120,10 +120,10 @@ var (
 		"getUserMedia−function getUserMedia() { [native code] }",
 		"mediaDevices−[object MediaDevices]",
 		"webkitPersistentStorage−[object DeprecatedStorageQuota]",
-		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"sendBeacon−function sendBeacon() { [native code] }",
 		"hardwareConcurrency−32",
-		"appVersion−5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"appVersion−5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"credentials−[object CredentialsContainer]",
 		"storage−[object StorageManager]",
 		"cookieEnabled−true",
@@ -133,7 +133,7 @@ var (
 		"pdfViewerEnabled−true",
 		"hardwareConcurrency−32",
 		"xr−[object XRSystem]",
-		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+		"userAgent−Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
 		"webdriver−false",
 		"getInstalledRelatedApps−function getInstalledRelatedApps() { [native code] }",
 		"getInstalledRelatedApps−function getInstalledRelatedApps() { [native code] }",
@@ -524,6 +524,13 @@ func CreateConversation(c *gin.Context) {
 		apiVersion = 3
 	}
 
+	releaseAccount, err := api.AcquireAccountRequest(c.Request.Context(), c.GetHeader(api.AuthorizationHeader))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusRequestTimeout, api.ReturnMessage(err.Error()))
+		return
+	}
+	defer releaseAccount()
+
 	chatRequirements, p, err := GetChatRequirementsByGin(c, uid)
 
 	if err != nil {
@@ -591,12 +598,18 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 		urlPrefix = ApiPrefix
 	}
 	req, _ := http.NewRequest(http.MethodPost, urlPrefix+"/f/conversation", bytes.NewBuffer(jsonBytes))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", api.UserAgent)
+	referer := api.ChatGPTApiUrlPrefix + "/"
+	if request.ConversationID != "" {
+		referer = api.ChatGPTApiUrlPrefix + "/c/" + request.ConversationID
+	}
+	api.ApplyChatGPTBrowserHeaders(req, api.ChatGPTBrowserHeaderOptions{
+		Accept:      "text/event-stream",
+		ContentType: "application/json",
+		Referer:     referer,
+	})
 	if urlPrefix == ApiPrefix {
 		req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
 	}
-	req.Header.Set("Accept", "text/event-stream")
 	if arkoseToken != "" {
 		req.Header.Set("Openai-Sentinel-Arkose-Token", arkoseToken)
 	}
@@ -609,17 +622,10 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 	if turnstileToken != "" {
 		req.Header.Set("Openai-Sentinel-Turnstile-Token", turnstileToken)
 	}
-	req.Header.Set("Origin", api.ChatGPTApiUrlPrefix)
-	if request.ConversationID != "" {
-		req.Header.Set("Referer", api.ChatGPTApiUrlPrefix+"/c/"+request.ConversationID)
-	} else {
-		req.Header.Set("Referer", api.ChatGPTApiUrlPrefix+"/")
-	}
 
 	if api.PUID != "" {
 		req.Header.Set("Cookie", "_puid="+api.PUID+";")
 	}
-	req.Header.Set("Oai-Language", api.Language)
 	if urlPrefix == ApiPrefix {
 		if api.OAIDID != "" {
 			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID+";")
@@ -647,7 +653,7 @@ func sendConversationRequest(c *gin.Context, request CreateConversationRequest, 
 		}
 
 		req, _ := http.NewRequest(http.MethodGet, urlPrefix+"/models", nil)
-		req.Header.Set("User-Agent", api.UserAgent)
+		api.ApplyChatGPTBrowserHeaders(req, api.ChatGPTBrowserHeaderOptions{Accept: "*/*"})
 		if urlPrefix == ApiPrefix {
 			req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
 			if api.OAIDID != "" {
@@ -911,8 +917,15 @@ func handleNoAuthGet(c *gin.Context, url string, errorMessage string) {
 }
 
 func handleGet(c *gin.Context, url string, errorMessage string) {
+	releaseAccount, err := api.AcquireAccountRequest(c.Request.Context(), c.GetHeader(api.AuthorizationHeader))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusRequestTimeout, api.ReturnMessage(err.Error()))
+		return
+	}
+	defer releaseAccount()
+
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
-	req.Header.Set("User-Agent", api.UserAgent)
+	api.ApplyChatGPTBrowserHeaders(req, api.ChatGPTBrowserHeaderOptions{Accept: "*/*"})
 	req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
 	resp, err := api.Client.Do(req)
 	if err != nil {
@@ -940,7 +953,17 @@ func handlePatch(c *gin.Context, url string, requestBody string, errorMessage st
 }
 
 func handlePostOrPatch(c *gin.Context, req *http.Request, errorMessage string) {
-	req.Header.Set("User-Agent", api.UserAgent)
+	releaseAccount, err := api.AcquireAccountRequest(c.Request.Context(), c.GetHeader(api.AuthorizationHeader))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusRequestTimeout, api.ReturnMessage(err.Error()))
+		return
+	}
+	defer releaseAccount()
+
+	api.ApplyChatGPTBrowserHeaders(req, api.ChatGPTBrowserHeaderOptions{
+		Accept:      "*/*",
+		ContentType: "application/json",
+	})
 	req.Header.Set(api.AuthorizationHeader, api.GetAccessToken(c.GetHeader(api.AuthorizationHeader)))
 	resp, err := api.Client.Do(req)
 	if err != nil {
@@ -969,42 +992,22 @@ func GetChatRequirementsByGin(c *gin.Context, uid string) (*ChatRequirements, st
 }
 
 func GetChatRequirementsByAccessToken(accessToken string, uid string) (*ChatRequirements, string, error) {
+	return GetChatRequirementsByAccessTokenWithSession(accessToken, uid, uid)
+}
 
-	urlPrefix := ""
+func GetChatRequirementsByAccessTokenWithSession(accessToken string, uid string, sessionID string) (*ChatRequirements, string, error) {
+	proofProbe := getCachedRequireProof()
+	path := "/sentinel/chat-requirements"
 
-	if accessToken == "Bearer " || accessToken == "" {
-		urlPrefix = AnonPrefix
-	} else {
-		urlPrefix = ApiPrefix
-	}
-
-	if cachedRequireProof == "" {
-		cachedRequireProof = "gAAAAAC" + generateAnswer(strconv.FormatFloat(rand.Float64(), 'f', -1, 64), "0")
-	}
-
-	req, _ := http.NewRequest(
-		http.MethodPost,
-		urlPrefix+"/sentinel/chat-requirements",
-		bytes.NewBuffer([]byte(`{"conversation_mode_kind":"primary_assistant","p":"`+"gAAAAAC"+cachedRequireProof+`"}`)),
+	req, err := newChatRequirementsRequest(
+		accessToken,
+		uid,
+		sessionID,
+		path,
+		[]byte(`{"conversation_mode_kind":"primary_assistant","p":"`+"gAAAAAC"+proofProbe+`"}`),
 	)
-
-	if api.PUID != "" {
-		req.Header.Set("Cookie", "_puid="+api.PUID+";")
-	}
-	req.Header.Set("Oai-Language", api.Language)
-	if urlPrefix == ApiPrefix {
-		if api.OAIDID != "" {
-			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID+";")
-			req.Header.Set("Oai-Device-Id", api.OAIDID)
-		}
-	} else {
-		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+uid+";")
-		req.Header.Set("Oai-Device-Id", uid)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", api.UserAgent)
-	if urlPrefix == ApiPrefix {
-		req.Header.Set(api.AuthorizationHeader, accessToken)
+	if err != nil {
+		return nil, "", err
 	}
 
 	res, err := api.Client.Do(req)
@@ -1015,11 +1018,237 @@ func GetChatRequirementsByAccessToken(accessToken string, uid string) (*ChatRequ
 
 	defer res.Body.Close()
 	var require ChatRequirements
-	err = json.NewDecoder(res.Body).Decode(&require)
+	endpoint := chatRequirementsTargetPath(getChatRequirementsURLPrefix(accessToken), path)
+	if err = readChatRequirementsJSONResponse(res, endpoint, &require); err != nil {
+		return nil, "", err
+	}
+	return &require, proofProbe, nil
+}
+
+type chatRequirementsPrepareResponse struct {
+	Persona      string `json:"persona"`
+	PrepareToken string `json:"prepare_token"`
+	Turnstile    struct {
+		Required bool   `json:"required"`
+		DX       string `json:"dx,omitempty"`
+	} `json:"turnstile"`
+	Proof ProofWork `json:"proofofwork"`
+}
+
+type chatRequirementsFinalizeRequest struct {
+	PrepareToken string `json:"prepare_token"`
+	ProofToken   string `json:"proofofwork,omitempty"`
+	Turnstile    string `json:"turnstile,omitempty"`
+}
+
+type chatRequirementsFinalizeResponse struct {
+	Persona     string `json:"persona"`
+	Token       string `json:"token"`
+	ExpireAfter int    `json:"expire_after"`
+	ExpireAt    int64  `json:"expire_at"`
+}
+
+func FinalizeChatRequirementsByAccessToken(accessToken string, uid string) (*ChatRequirements, string, error) {
+	return FinalizeChatRequirementsByAccessTokenWithSession(accessToken, uid, uid)
+}
+
+func FinalizeChatRequirementsByAccessTokenWithSession(accessToken string, uid string, sessionID string) (*ChatRequirements, string, error) {
+	proofProbe := getCachedRequireProof()
+	preparePath := "/sentinel/chat-requirements/prepare"
+
+	req, err := newChatRequirementsRequest(
+		accessToken,
+		uid,
+		sessionID,
+		preparePath,
+		[]byte(`{"p":"`+"gAAAAAC"+proofProbe+`"}`),
+	)
 	if err != nil {
 		return nil, "", err
 	}
-	return &require, cachedRequireProof, nil
+
+	res, err := api.Client.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer res.Body.Close()
+
+	var prepareResp chatRequirementsPrepareResponse
+	prepareEndpoint := chatRequirementsTargetPath(getChatRequirementsURLPrefix(accessToken), preparePath)
+	if err = readChatRequirementsJSONResponse(res, prepareEndpoint, &prepareResp); err != nil {
+		return nil, "", fmt.Errorf("chat requirements prepare failed: %w", err)
+	}
+
+	require := &ChatRequirements{}
+	require.Proof = prepareResp.Proof
+	require.Turnstile.Required = prepareResp.Turnstile.Required
+	require.Turnstile.DX = prepareResp.Turnstile.DX
+
+	finalizeReq := chatRequirementsFinalizeRequest{
+		PrepareToken: prepareResp.PrepareToken,
+	}
+	if require.Proof.Required {
+		finalizeReq.ProofToken = CalcProofToken(require)
+	}
+	if require.Turnstile.Required {
+		finalizeReq.Turnstile = ProcessTurnstile(require.Turnstile.DX, proofProbe)
+	}
+
+	finalizePayload, _ := json.Marshal(finalizeReq)
+	finalizePath := "/sentinel/chat-requirements/finalize"
+	req, err = newChatRequirementsRequest(
+		accessToken,
+		uid,
+		sessionID,
+		finalizePath,
+		finalizePayload,
+	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	res, err = api.Client.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer res.Body.Close()
+
+	var finalizeResp chatRequirementsFinalizeResponse
+	finalizeEndpoint := chatRequirementsTargetPath(getChatRequirementsURLPrefix(accessToken), finalizePath)
+	if err = readChatRequirementsJSONResponse(res, finalizeEndpoint, &finalizeResp); err != nil {
+		return nil, "", fmt.Errorf("chat requirements finalize failed: %w", err)
+	}
+	require.Token = finalizeResp.Token
+	return require, proofProbe, nil
+}
+
+func getChatRequirementsURLPrefix(accessToken string) string {
+	normalized := api.GetAccessToken(accessToken)
+	if normalized == "Bearer " || normalized == "" {
+		return AnonPrefix
+	}
+	return ApiPrefix
+}
+
+func getCachedRequireProof() string {
+	if cachedRequireProof != "" {
+		return cachedRequireProof
+	}
+	cachedRequireProof = generateAnswer(strconv.FormatFloat(rand.Float64(), 'f', -1, 64), "0")
+	return cachedRequireProof
+}
+
+func newChatRequirementsRequest(accessToken string, uid string, sessionID string, path string, payload []byte) (*http.Request, error) {
+	urlPrefix := getChatRequirementsURLPrefix(accessToken)
+	normalizedToken := api.GetAccessToken(accessToken)
+	targetPath := chatRequirementsTargetPath(urlPrefix, path)
+
+	req, err := http.NewRequest(http.MethodPost, urlPrefix+path, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	if api.PUID != "" {
+		req.Header.Set("Cookie", "_puid="+api.PUID+";")
+	}
+	api.ApplyChatGPTBrowserHeaders(req, api.ChatGPTBrowserHeaderOptions{
+		Accept:      "*/*",
+		ContentType: "application/json",
+	})
+	req.Header.Set("Oai-Client-Version", oaiClientVersion)
+	req.Header.Set("Oai-Client-Build-Number", oaiClientBuildNumber)
+	if sessionID != "" {
+		req.Header.Set("Oai-Session-Id", sessionID)
+	}
+	req.Header.Set("X-Openai-Target-Path", targetPath)
+	req.Header.Set("X-Openai-Target-Route", targetPath)
+	if urlPrefix == ApiPrefix {
+		if api.OAIDID != "" {
+			req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+api.OAIDID+";")
+			req.Header.Set("Oai-Device-Id", api.OAIDID)
+		}
+		req.Header.Set(api.AuthorizationHeader, normalizedToken)
+	} else {
+		req.Header.Set("Cookie", req.Header.Get("Cookie")+"oai-did="+uid+";")
+		req.Header.Set("Oai-Device-Id", uid)
+	}
+	return req, nil
+}
+
+func chatRequirementsTargetPath(urlPrefix string, path string) string {
+	if urlPrefix == AnonPrefix {
+		return "/backend-anon" + path
+	}
+	return "/backend-api" + path
+}
+
+func readChatRequirementsJSONResponse(res *http.Response, endpoint string, out interface{}) error {
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode != http.StatusOK {
+		if looksLikeCloudflareChallenge(res, body) {
+			return cloudflareChatRequirementsError(res, endpoint, body)
+		}
+		return fmt.Errorf("chat_requirements_http_error endpoint=%s status=%d content_type=%q body=%q", endpoint, res.StatusCode, res.Header.Get("Content-Type"), compactResponseSnippet(body))
+	}
+	if looksLikeCloudflareChallenge(res, body) {
+		return cloudflareChatRequirementsError(res, endpoint, body)
+	}
+	if err := json.Unmarshal(body, out); err != nil {
+		return fmt.Errorf("decode chat requirements response endpoint=%s status=%d content_type=%q: %w", endpoint, res.StatusCode, res.Header.Get("Content-Type"), err)
+	}
+	return nil
+}
+
+func looksLikeCloudflareChallenge(res *http.Response, body []byte) bool {
+	contentType := strings.ToLower(res.Header.Get("Content-Type"))
+	if !strings.Contains(contentType, "text/html") && !bytes.HasPrefix(bytes.TrimSpace(body), []byte("<")) {
+		return false
+	}
+	lowerBody := strings.ToLower(string(body))
+	return strings.Contains(lowerBody, "challenge-platform") ||
+		strings.Contains(lowerBody, "cf_chl") ||
+		strings.Contains(lowerBody, "cloudflare") ||
+		strings.Contains(lowerBody, "enable javascript and cookies")
+}
+
+func cloudflareChatRequirementsError(res *http.Response, endpoint string, body []byte) error {
+	return fmt.Errorf(
+		"chat_requirements_blocked_by_cloudflare endpoint=%s status=%d content_type=%q ray=%s",
+		endpoint,
+		res.StatusCode,
+		res.Header.Get("Content-Type"),
+		extractCloudflareRay(res, body),
+	)
+}
+
+func extractCloudflareRay(res *http.Response, body []byte) string {
+	if ray := strings.TrimSpace(res.Header.Get("Cf-Ray")); ray != "" {
+		return ray
+	}
+	text := string(body)
+	for _, marker := range []string{"cRay: '", `cRay: "`, "ray="} {
+		start := strings.Index(text, marker)
+		if start < 0 {
+			continue
+		}
+		rest := text[start+len(marker):]
+		end := strings.IndexAny(rest, `'",&<>`)
+		if end < 0 {
+			return strings.TrimSpace(rest)
+		}
+		return strings.TrimSpace(rest[:end])
+	}
+	return "unknown"
+}
+
+func compactResponseSnippet(body []byte) string {
+	text := strings.TrimSpace(string(body))
+	if len(text) > 300 {
+		text = text[:300]
+	}
+	return strings.Join(strings.Fields(text), " ")
 }
 
 func Ping(c *gin.Context) {
@@ -1045,12 +1274,27 @@ func getConfig() []interface{} {
 	script := cachedScripts[rand.Intn(len(cachedScripts))]
 	timeNum := (float64(time.Since(api.StartTime).Nanoseconds()) + rand.Float64()) / 1e6
 	rand.New(rand.NewSource(time.Now().UnixNano()))
-	navigatorKey := navigatorKeys[rand.Intn(len(navigatorKeys))]
+	navigatorKey := normalizeNavigatorKey(navigatorKeys[rand.Intn(len(navigatorKeys))])
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	documentKey := documentKeys[rand.Intn(len(documentKeys))]
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	windowKey := windowKeys[rand.Intn(len(windowKeys))]
 	return []interface{}{cachedHardware, getParseTime(), int64(4294705152), 0, api.UserAgent, script, cachedDpl, api.Language, api.Language + "," + api.Language[:2], 0, navigatorKey, documentKey, windowKey, timeNum, cachedSid}
+}
+
+func normalizeNavigatorKey(value string) string {
+	separator := "−"
+	if strings.HasPrefix(value, "userAgent"+separator) {
+		return "userAgent" + separator + api.UserAgent
+	}
+	if strings.HasPrefix(value, "appVersion"+separator) {
+		return "appVersion" + separator + appVersionFromUserAgent(api.UserAgent)
+	}
+	return value
+}
+
+func appVersionFromUserAgent(userAgent string) string {
+	return strings.TrimPrefix(userAgent, "Mozilla/")
 }
 
 func CalcProofToken(require *ChatRequirements) string {
@@ -1089,11 +1333,10 @@ func GetDpl() {
 	cachedScripts = append(cachedScripts, "https://cdn.oaistatic.com/_next/static/cXh69klOLzS0Gy2joLDRS/_ssgManifest.js?dpl=453ebaec0d44c2decab71692e1bfe39be35a24b3")
 	cachedDpl = "dpl=453ebaec0d44c2decab71692e1bfe39be35a24b3"
 	request, err := http.NewRequest(http.MethodGet, "https://chatgpt.com", nil)
-	request.Header.Set("User-Agent", api.UserAgent)
-	request.Header.Set("Accept", "*/*")
 	if err != nil {
 		return
 	}
+	api.ApplyChatGPTBrowserHeaders(request, api.ChatGPTBrowserHeaderOptions{Accept: "*/*"})
 	response, err := api.Client.Do(request)
 	if err != nil {
 		return

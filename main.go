@@ -30,8 +30,11 @@ func main() {
 	}
 	logger.Info("id : " + id)
 
-	flatPort := flag.String("port", "8080", "")
+	flatPort := flag.String("port", "8081", "")
+	keepImitateConversations := flag.Bool("keep-imitate-conversations", false, "")
 	flag.Parse()
+	imitate.AutoDeleteConversations = !*keepImitateConversations
+	logger.Info(fmt.Sprintf("Imitate auto delete conversations : %t", imitate.AutoDeleteConversations))
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -170,10 +173,15 @@ func setupImitateAPIs(router *gin.Engine) {
 
 		apiGroup := imitateGroup.Group("/v1")
 		{
+			apiGroup.GET("/models", imitate.ListModels)
+			apiGroup.GET("/models/:model", imitate.RetrieveModel)
 			apiGroup.POST("/chat/completions", imitate.CreateChatCompletions)
+			apiGroup.POST("/chat/responses", imitate.CreateResponses)
+			apiGroup.POST("/responses", imitate.CreateResponses)
 			apiGroup.POST("/files", imitate.CreateFile)
 			apiGroup.GET("/files", imitate.ListFiles)
 			apiGroup.GET("/files/:id", imitate.RetrieveFile)
+			apiGroup.GET("/files/:id/content", imitate.RetrieveFileContent)
 			apiGroup.DELETE("/files/:id", imitate.DeleteFile)
 		}
 	}

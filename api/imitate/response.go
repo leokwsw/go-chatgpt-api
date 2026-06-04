@@ -100,6 +100,7 @@ type Message struct {
 	UpdateTime interface{}     `json:"update_time"`
 	Content    chatgpt.Content `json:"content"`
 	EndTurn    interface{}     `json:"end_turn"`
+	Status     string          `json:"status"`
 	Weight     float64         `json:"weight"`
 	Metadata   Metadata        `json:"metadata"`
 	Recipient  string          `json:"recipient"`
@@ -109,6 +110,7 @@ type Metadata struct {
 	Citations     []Citation     `json:"citations,omitempty"`
 	MessageType   string         `json:"message_type"`
 	FinishDetails *FinishDetails `json:"finish_details"`
+	IsComplete    bool           `json:"is_complete"`
 	ModelSlug     string         `json:"model_slug"`
 	Recipient     string         `json:"recipient"`
 }
@@ -130,7 +132,8 @@ type FinishDetails struct {
 }
 
 type StringStruct struct {
-	Text string `json:"text"`
+	Text  string         `json:"text"`
+	Parts map[int]string `json:"-"`
 }
 
 func newChatCompletion(fullTest, model string, id string) ChatCompletion {
@@ -150,7 +153,8 @@ func newChatCompletion(fullTest, model string, id string) ChatCompletion {
 					Content: fullTest,
 					Role:    "assistant",
 				},
-				Index: 0,
+				Index:        0,
+				FinishReason: "stop",
 			},
 		},
 	}
